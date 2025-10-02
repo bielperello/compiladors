@@ -9,8 +9,7 @@
 import java_cup.runtime.*;
 import symbols.*;
 
-import java.util.List;
-import java.util.ArrayList;
+import java.util.*;
 
 class Parser;
 
@@ -62,185 +61,331 @@ precedence right NOT;          // negació (NOT) té associativitat a la dreta
 
 start with program;
 
-program ::= PRINCIPAL ID DOS_PUNTS decls:d methods:m instrs:i ENDPRINCIPAL
-            {: :}
+program ::= PRINCIPAL ID:id DOS_PUNTS decls:d methods:m instrs:i ENDPRINCIPAL
+            {:
+                RESULT = new ProgramNode(id, d, m, i, line($1), column($1));
+            :}
 ;
 
 decls ::= decl:d decls:ds
-            {: :}
+            {:
+                List<DeclNode> list = new ArrayList<>();
+                list.add(d);
+                if (ds != null) list.addAll(ds);
+                RESULT = list;
+            :}
         | /* buit */
+            {:
+                RESULT = new ArrayList<DeclNode>();
+            :}
 ;
 
 decl ::= tipus:t list_id:l assig:a
-            {: :}
+            {:
+                RESULT = new DeclNode(false, t, l, a, line($1), column($1));
+            :}
         | CONST tipus:t list_id:l ASSIGNACIO expr:e
+            {:
+                RESULT = new DeclNode(true, t, l, e, line($1), column($1));
+            :}
 ;
 
 methods ::= method:m methods:ms
-            {: :}
+            {:
+                List<MethodNode> list = new ArrayList<>();
+                list.add(m);
+                if (ms != null) list.addAll(ms);
+                RESULT = list;
+            :}
         | /* buit */
+            {:
+                RESULT = new ArrayList<MethodNode>();
+            :}
 ;
 
-method ::= FUNCIO tipus:t ID:i OBR_PAR args:a TANC_PAR DOS_PUNTS decls:d instrs:i TORNAR expr:e ENDFUNCIO
-            {: :}
-        | PROCEDIMENT ID:i OBR_PAR args:a TANC_PAR DOS_PUNTS decls:d instrs:i ENDPROCEDIMENT
-            {: :}
+method ::= FUNCIO tipus:t ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS decls:d instrs:i TORNAR expr:e ENDFUNCIO
+            {:
+                RESULT = new MethodNode(true, id, t, a, d, i, e, line($1), column($1));
+            :}
+        | PROCEDIMENT ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS decls:d instrs:i ENDPROCEDIMENT
+            {:
+                RESULT = new MethodNode(true, id, t, a, d, i, null, line($1), column($1));
+            :}
 ;
 
 instrs ::= instr:i PUNT_COMA instrs:is
-            {: :}
+            {:
+                List<InstrNode> list = new ArrayList<>();
+                list.add(i);
+                if (is != null) list.addAll(is);
+                RESULT = list;
+            :}
         | /* buit */
+            {:
+                RESULT = new ArrayList<InstrNode>();
+            :}
 ;
 
 instr ::= call:c
-            {: :}
+            {:
+                RESULT = c;
+            :}
         | cond:c
-            {: :}
+            {:
+                RESULT = c;
+            :}
         | loop:l
-            {: :}
+            {:
+                RESULT = l;
+            :}
         | entrada:e
-            {: :}
+            {:
+                RESULT = e;
+            :}
         | sortida:s
-            {: :}
+            {:
+                RESULT = s;
+            :}
         | decl:d
-            {: :}
+            {:
+                RESULT = d;
+            :}
 ;
 
 call ::= ID:id OBR_PAR args:a TANC_PAR
-            {: :}
+            {:
+                RESULT = new InstrNode.CallNode(id, a, line($1), column($1));
+            :}
 ;
 
-cond ::= OP_IF OBR_PAR expr:e TANC_PAR OP_THEN instrs:i optional_cond
-            {: :}
-        | OP_SWITCH ID:id DOS_PUNTS cas_opcions DEFAULT_SWITCH DOS_PUNTS instrs:i OP_ENDSWITCH
+cond ::= OP_IF OBR_PAR expr:e TANC_PAR OP_THEN instrs:i optional_cond:o
+            {:
+                RESULT = new CondNode.IfNode(e, i, o, line($1), column($1));
+            :}
+        | OP_SWITCH ID:id DOS_PUNTS cas_opcions:c DEFAULT_SWITCH DOS_PUNTS instrs:i OP_ENDSWITCH
+            {:
+                RESULT = new CondNode.SwitchNode(id, c, i, line($1), column($1));
+            :}
 ;
 
 optional_cond ::= OP_ELSE instrs:i OP_ENDIF
-            {: :}
+            {:
+                RESULT = i;
+            :}
         | OP_ENDIF
-            {: :}
+            {:
+                RESULT = null;
+            :}
 ;
 
 cas_opcions ::= cas_opcio:c cas_opcions:cs
-            {: :}
+            {:
+                List<CondNode.SwitchNode.CaseNode> list = new ArrayList<>();
+                list.add(c);
+                list.addAll(cs);
+                RESULT = list;
+            :}
         | cas_opcio:c
-            {: :}
+            {:
+                List<CondNode.SwitchNode.CaseNode> list = new ArrayList<>();
+                list.add(c);
+                RESULT = list;
+            :}
 ;
 
 cas_opcio ::= terme:t DOS_PUNTS instrs:i
-            {: :}
+            {:
+                RESULT = new CondNode.SwitchNode.CaseNode(t, i, line($1), column($1));
+            :}
 ;
 
 loop ::= OP_WHILE OBR_PAR expr:e TANC_PAR OP_DO instrs:i OP_ENDWHILE
-            {: :}
+            {:
+                RESULT = new LoopNode.WhileNode(e, i, line($1), column($1));
+            :}
         | OP_DO instrs:i OP_REP OBR_PAR expr:e TANC_PAR
-            {: :}
+            {:
+                RESULT = new LoopNode.DoWhileNode(e, i, line($1), column($1));
+            :}
 ;
 
-entrada ::= INPUT OBR_PAR ID:i TANC_PAR
-            {: :}
+entrada ::= INPUT OBR_PAR ID:id TANC_PAR
+            {:
+                RESULT = new InstrNode.InputNode(id, line($1), column($1));
+            :}
 ;
 
 sortida ::= OUTPUT OBR_PAR expr:e TANC_PAR
-            {: :}
+            {:
+                RESULT = new InstrNode.OutputNode(e, line($1), column($1));
+            :}
 ;
 
 tipus ::= OP_TIPUS_ENTER
-            {: :}
+            {:
+                RESULT = new TypeNode(TypeNode.Kind.INT, line($1), column($1));
+            :}
         | OP_TIPUS_CADENA
-            {: :}
+            {:
+                RESULT = new TypeNode(TypeNode.Kind.STRING, line($1), column($1));
+            :}
         | OP_TIPUS_LOGIC
-            {: :}
+            {:
+                RESULT = new TypeNode(TypeNode.Kind.BOOL, line($1), column($1));
+            :}
         | OP_TIPUS_TUPLA tupla_def:td
-            {: :}
+            {:
+                RESULT = td;
+            :}
 ;
 
 tupla_def ::= OBR_PAR tupla_camp_list:tcl TANC_PAR
-            {: :}
+            {:
+                RESULT = new TypeNode(tcl, line($1), column($1));
+            :}
 ;
 
 tupla_camp_list ::= arg:a COMA tupla_camp_list:tcl
-            {: :}
+            {:
+                List<ArgNode> list = new ArrayList<>();
+                list.add(a);
+                list.addAll(tcl);
+                RESULT = list;
+            :}
         | arg:a
-            {: :}
+            {:
+                List<ArgNode> list = new ArrayList<>();
+                list.add(a);
+                RESULT = list;
+            :}
 ;
 
 list_id ::= ID:id COMA list_id:l
-            {: :}
+            {:
+                List<String> list = new ArrayList<>();
+                list.add(id);
+                list.addAll(l);
+                RESULT = list;
+            :}
         | ID:id
-            {: :}
+            {:
+                List<String> list = new ArrayList<>();
+                list.add(id);
+                RESULT = list;
+            :}
 ;
 
 args ::= arg:a COMA args:as
-            {: :}
+            {:
+                List<ArgNode> list = new ArrayList<>();
+                list.add(a);
+                if(as != null) list.addAll(as);
+                RESULT = list;
+            :}
         | arg: a
-            {: :}
+            {:
+                List<ArgNode> list = new ArrayList<>();
+                list.add(a);
+                RESULT = list;
+            :}
         | /* buit */
+            {:
+                RESULT = new ArrayList<ArgNode>();
+            :}
 ;
 
 arg ::= ID:id DOS_PUNTS tipus:t
-            {: :}
+            {:
+                RESULT = new ArgNode(id, t, line($1), column($1));
+            :}
 ;
 
 assig ::= ASSIGNACIO expr:e
-            {: :}
+            {:
+                RESULT = e;
+            :}
         | /* buit */
+            {:
+                RESULT = null;
+            :}
 ;
 
 expr ::= expr:e op_arit:op terme:t
-            {: :}
+            {:
+                RESULT = new ExprNode.BinaryOpNode(e, op, t, line($1), column($1));
+            :}
         | expr:e op_rel:op terme:t
-            {: :}
+            {:
+                RESULT = new ExprNode.BinaryOpNode(e, op, t, line($1), column($1));
+            :}
         | expr:e op_log:op terme:t
-            {: :}
+            {:
+                RESULT = new ExprNode.BinaryOpNode(e, op, t, line($1), column($1));
+            :}
         | OBR_PAR expr:e TANC_PAR
-            {: :}
+            {:
+                RESULT = e;
+            :}
         | NOT expr:e
-            {: :}
+            {:
+                RESULT = new ExprNode.UnaryOpNode("NOT", e, line($1), column($1));
+            :}
         | terme:t
-            {: :}
+            {:
+                RESULT = t;
+            :}
 ;
 
 terme ::= VALOR_LOGIC:vl
-            {: :}
+            {:
+                RESULT = new ExprNode.LiteralNode(vl, line($1), column($1));
+            :}
         | ENTER:e
-            {: :}
+            {:
+                RESULT = new ExprNode.LiteralNode(e, line($1), column($1));
+            :}
         | ID:i
-            {: :}
+            {:
+                RESULT = new ExprNode.VarNode(i, line($1), column($1));
+            :}
         | CADENA:c
-            {: :}
+            {:
+                RESULT = new ExprNode.LiteralNode(c, line($1), column($1));
+            :}
         | call:c
-            {: :}
+            {:
+                RESULT = new ExprInstrNode(c);
+            :}
 ;
 
 op_arit ::= PLUS
-            {: :}
+            {: RESULT = "+"; :}
         | MINUS
-            {: :}
+            {: RESULT = "-"; :}
         | TIMES
-            {: :}
+            {: RESULT = "*"; :}
         | DIVIDE
-            {: :}
+            {: RESULT = "/"; :}
 ;
 
 op_rel ::= EQ
-            {: :}
+            {: RESULT = "=="; :}
         | NE
-            {: :}
+            {: RESULT = "!="; :}
         | LT
-            {: :}
+            {: RESULT = "<"; :}
         | LE
-            {: :}
+            {: RESULT = "<="; :}
         | GT
-            {: :}
+            {: RESULT = ">"; :}
         | GE
-            {: :}
+            {: RESULT = ">="; :}
 ;
 
 op_log ::= AND
-            {: :}
+            {: RESULT = "i"; :}
         | OR
-            {: :}
+            {: RESULT = "o"; :}
 ;
 
 
