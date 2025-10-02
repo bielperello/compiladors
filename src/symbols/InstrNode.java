@@ -34,24 +34,6 @@ public abstract class InstrNode extends Node {
         }
     }
 
-    public static class LoopNode extends InstrNode {
-        public ExprNode condition;
-        public List<InstrNode> body;
-
-        public LoopNode(ExprNode condition, List<InstrNode> body, int line, int column) {
-            super(line, column);
-            this.condition = condition;
-            this.body = body;
-        }
-
-        @Override
-        public void generateCode() {
-            System.out.println("while ( EXPRESSIÓ ) {");
-            for (InstrNode instr : body) instr.generateCode();
-            System.out.println("}");
-        }
-    }
-
     public static class InputNode extends InstrNode {
         public String id;
 
