@@ -9,18 +9,21 @@
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import token.TokenType;
-import token.Yytoken.Nombre;
-import token.Yytoken.TSimple;
-import token.Yytoken.ValorLogic;
-import token.Yytoken;
+
+import java_cup.runtime.*;
+import java_cup.runtime.ComplexSymbolFactory.ComplexSymbol;
 %%
 
 %public
 %class AnaLex
 %unicode
+%cup
 %line
 %column
+
+%eofval{
+  return symbol(ParserSym.EOF);
+%eofval}
 
 //DECLARACIONS
 
@@ -28,24 +31,24 @@ espai           = [ \t\n\r]+
 id              = [a-zA-Z_][a-zA-Z_0-9]*
 op_aritmetic    = ("+"|"-"|"/"|"*")
 op_rel          = ("<="|">="|"!="|"=="|"<"|">")
-op_logic        = (i|o|no)
+op_logic        = (no|i|o)
 valor_logic     = (cert|fals)
 nombre          = [0-9]+(\.[0-9]+)?([Ee][+-]?[0-9]+)?
+cadena          =  \"[^\"]*\"
 
 comentari = ##.*
 
 %{
     public static void main(String []args) {
-       /* if (args.length < 1) {
-            System.err.println("Indica un fitxer amb les dades d'entrada");
-            System.exit(0);
+        /* if (args.length < 1) {
+        System.err.println("Indica un fitxer amb les dades d'entrada");
+        System.exit(0);
         }*/
-        try {
-            FileReader in = new FileReader("src/valorsidproves.txt");
-            AnaLex lexer = new AnaLex(in);
-            Yytoken token;
 
-            while((token = lexer.yylex()) != null) {
+        try (FileReader in = new FileReader("src/valorsidproves.txt")) {
+            AnaLex lexer = new AnaLex(in);
+            Symbol token;
+            while ((token = lexer.next_token()).sym != ParserSym.EOF) {
                 System.out.println(token);
             }
         } catch (FileNotFoundException e) {
@@ -54,75 +57,110 @@ comentari = ##.*
             System.err.println("Error processant el fitxer d'entrada");
         }
     }
+
+    /**
+     Construcció d'un symbol sense atribut associat.
+     **/
+    private ComplexSymbol symbol(int type) {
+        return new ComplexSymbol(ParserSym.terminalNames[type], type,
+            new ComplexSymbolFactory.Location(yyline + 1, yycolumn + 1),
+            new ComplexSymbolFactory.Location(yyline + 1, yycolumn + yylength()));
+    }
+
+    /**
+     Construcció d'un symbol amb un atribut associat.
+     **/
+    private Symbol symbol(int type, Object value) {
+        return new ComplexSymbol(ParserSym.terminalNames[type], type,
+           new ComplexSymbolFactory.Location(yyline + 1, yycolumn + 1),
+           new ComplexSymbolFactory.Location(yyline + 1, yycolumn + yylength()), value);
+    }
 %}
 
 /* Patrons i accions */
 %%
 // ESPAIS i COMENTARIS
 {espai}              {/* Ignorar */ }
-{comentari}          { return new TSimple(TokenType.COMENTARI, yytext(), yyline, yycolumn); }
+{comentari}          {/* Ignorar */}
 
 // OPERADORS
-":="                 { return new Yytoken(TokenType.ASSIGNACIO, yyline, yycolumn); }
-":"                  { return new Yytoken(TokenType.DOS_PUNTS, yyline, yycolumn); }
-"("                  { return new Yytoken(TokenType.OBR_PAR, yyline, yycolumn); }
-")"                  { return new Yytoken(TokenType.TANC_PAR, yyline, yycolumn); }
-"["                  { return new Yytoken(TokenType.OBR_CORX, yyline, yycolumn); }
-"]"                  { return new Yytoken(TokenType.TANC_CORX, yyline, yycolumn); }
+":="                 { return symbol(ParserSym.ASSIGNACIO);}
+":"                  { return symbol(ParserSym.DOS_PUNTS); }
+"("                  { return symbol(ParserSym.OBR_PAR); }
+")"                  { return symbol(ParserSym.TANC_PAR); }
+"["                  { return symbol(ParserSym.OBR_CORX); }
+"]"                  { return symbol(ParserSym.TANC_CORX); }
+","                  { return symbol(ParserSym.COMA);}
+";"                  { return symbol(ParserSym.PUNT_COMA)}
 
 
 {op_aritmetic}       {
                           switch (yytext()) {
-                              case "+" : return new Yytoken(TokenType.PLUS, yyline, yycolumn);
-                              case "-" : return new Yytoken(TokenType.MINUS, yyline, yycolumn);
-                              case "*" : return new Yytoken(TokenType.TIMES, yyline, yycolumn);
-                              case "/" : return new Yytoken(TokenType.DIVIDE, yyline, yycolumn);
+                              case "+" : return symbol(ParserSym.PLUS);
+                              case "-" : return symbol(ParserSym.MINUS);
+                              case "*" : return symbol(ParserSym.TIMES);
+                              case "/" : return symbol(ParserSym.DIVIDE);
                           }
                       }
 
 /* Operadors relacionals */
 {op_rel}             {
                           switch (yytext()) {
-                              case "=="  : return new Yytoken(TokenType.EQ, yyline, yycolumn);
-                              case "!=" : return new Yytoken(TokenType.NE, yyline, yycolumn);
-                              case "<"  : return new Yytoken(TokenType.LT, yyline, yycolumn);
-                              case "<=" : return new Yytoken(TokenType.LE, yyline, yycolumn);
-                              case ">"  : return new Yytoken(TokenType.GT, yyline, yycolumn);
-                              case ">=" : return new Yytoken(TokenType.GE, yyline, yycolumn);
+                              case "=="  : return symbol(ParserSym.EQ);
+                              case "!=" : return symbol(ParserSym.NE);
+                              case "<"  : return symbol(ParserSym.LT);
+                              case "<=" : return symbol(ParserSym.LE);
+                              case ">"  : return symbol(ParserSym.GT);
+                              case ">=" : return symbol(ParserSym.GE);
                           }
                       }
 
 /* Operadors lògics */
 {op_logic}           {
                           switch (yytext()) {
-                              case "i"  : return new Yytoken(TokenType.AND, yyline, yycolumn);
-                              case "o"  : return new Yytoken(TokenType.OR, yyline, yycolumn);
-                              case "no" : return new Yytoken(TokenType.NOT, yyline, yycolumn);
+                              case "i"  : return symbol(ParserSym.AND);
+                              case "o"  : return symbol(ParserSym.OR);
+                              case "no" : return symbol(ParserSym.NOT);
                           }
                       }
 
 // PARAULES CLAU
-"si"                 { return new Yytoken(TokenType.OP_IF, yyline, yycolumn); }
-"llavors"            { return new Yytoken(TokenType.OP_THEN, yyline, yycolumn); }
-"sino"               { return new Yytoken(TokenType.OP_ELSE, yyline, yycolumn); }
-"fsi"                { return new Yytoken(TokenType.OP_ENDIF, yyline, yycolumn); }
-"mentre"             { return new Yytoken(TokenType.OP_WHILE, yyline, yycolumn); }
-"fer"                { return new Yytoken(TokenType.OP_DO, yyline, yycolumn); }
-"fmentre"            { return new Yytoken(TokenType.OP_ENDWHILE, yyline, yycolumn); }
-"repetir"            { return new Yytoken(TokenType.OP_REP, yyline, yycolumn); }
-"procediment"        { return new Yytoken(TokenType.PROCEDIMENT, yyline, yycolumn); }
-"funcio"             { return new Yytoken(TokenType.FUNCIO, yyline, yycolumn); }
-"tornar"             { return new Yytoken(TokenType.TORNAR, yyline, yycolumn); }
-"cadena"             { return new Yytoken(TokenType.OP_TIPUS_CADENA, yyline, yycolumn); }
-"tupla"              { return new Yytoken(TokenType.OP_TIPUS_TUPLA, yyline, yycolumn); }
-"enter"              { return new Yytoken(TokenType.OP_TIPUS_ENTER, yyline, yycolumn); }
-"logic"              { return new Yytoken(TokenType.OP_TIPUS_LOGIC, yyline, yycolumn); }
-"const"              { return new Yytoken(TokenType.CONST, yyline, yycolumn); }
+"principal"          { return symbol(ParserSym.PRINCIPAL); }
+"fprincipal"         { return symbol(ParserSym.ENDPRINCIPAL); }
+"si"                 { return symbol(ParserSym.OP_IF); }
+"llavors"            { return symbol(ParserSym.OP_THEN); }
+"sino"               { return symbol(ParserSym.OP_ELSE); }
+"fsi"                { return symbol(ParserSym.OP_ENDIF); }
+"cas"                { return symbol(ParserSym.OP_SWITCH); }
+"altre"              { return symbol(ParserSym.DEFAULT_SWITCH); }
+"fcas"               { return symbol(ParserSym.OP_ENDSWITCH); }
+"mentre"             { return symbol(ParserSym.OP_WHILE); }
+"fer"                { return symbol(ParserSym.OP_DO); }
+"fmentre"            { return symbol(ParserSym.OP_ENDWHILE); }
+"repetir"            { return symbol(ParserSym.OP_REP); }
+"procediment"        { return symbol(ParserSym.PROCEDIMENT); }
+"fiprocediment"      { return symbol(ParserSym.ENDPROCEDIMENT);}
+"funcio"             { return symbol(ParserSym.FUNCIO); }
+"fifuncio"           { return symbol(ParserSym.ENDFUNCIO); }
+"tornar"             { return symbol(ParserSym.TORNAR); }
+"cadena"             { return symbol(ParserSym.OP_TIPUS_CADENA); }
+"tupla"              { return symbol(ParserSym.OP_TIPUS_TUPLA); }
+"enter"              { return symbol(ParserSym.OP_TIPUS_ENTER); }
+"logic"              { return symbol(ParserSym.OP_TIPUS_LOGIC); }
+"const"              { return symbol(ParserSym.CONST); }
+"entrada"            { return symbol(ParserSym.INPUT); }
+"sortida"            { return symbol(ParserSym.OUTPUT); }
 
 // VALORS i IDENTIFICADORS
-{valor_logic}        { return new ValorLogic(yytext().equals("cert"), yyline, yycolumn);}
-{id}                 { return new TSimple(TokenType.ID, yytext(), yyline, yycolumn); }
-{nombre}             { return new Nombre(Double.parseDouble(yytext()), yyline, yycolumn); }
+{cadena}            {
+                       String lexema = yytext();
+                       // lleva les cometes
+                       lexema = lexema.substring(1, lexema.length()-1);
+                       return symbol(ParserSym.CADENA, lexema);
+                     }
+{valor_logic}        { return symbol(ParserSym.VALOR_LOGIC, yytext().equals("cert"));}
+{id}                 { return symbol(ParserSym.ID, yytext()); }
+{nombre}             { return symbol(ParserSym.ENTER, Double.parseDouble(yytext())); }
 
 // ERROR
-.                    { return new TSimple(TokenType.ERROR, yytext(), yyline, yycolumn); }
+.                    { return symbol(ParserSym.ERROR, yytext()); }

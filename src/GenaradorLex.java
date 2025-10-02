@@ -8,7 +8,7 @@ import jflex.exceptions.SilentExit;
 
 /**
  *
- * @author ferri
+ * @author Biel Perelló
  */
 public class GenaradorLex {
 

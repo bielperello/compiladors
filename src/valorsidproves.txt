@@ -1,6 +1,2 @@
-si biel == 0 llavors
-    l := cert
-    mentre l llavors
-        2+3
-    fmentre
-fsi
+principal programa1 :
+    fprincipal

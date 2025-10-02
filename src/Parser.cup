@@ -1,0 +1,254 @@
+/**
+ * Assignatura 21742 - Compiladors
+ * Estudis: Grau en Informàtica
+ * Itinerari: Computació
+ * Curs: 2025-2026
+ *
+ * Professor: Pere Palmer
+ */
+import java_cup.runtime.*;
+import symbols.*;
+
+import java.util.List;
+import java.util.ArrayList;
+
+class Parser;
+
+/*
+parser code {:
+    private Scanner scanner;
+    public Parser(Scanner scanner) {
+        this.scanner = scanner;
+    }
+:}
+*/
+
+terminal    PRINCIPAL, ENDPRINCIPAL,
+            OP_IF, OP_THEN, OP_ELSE, OP_ENDIF,
+            OP_SWITCH, DEFAULT_SWITCH, OP_ENDSWITCH,
+            OP_WHILE, OP_DO, OP_ENDWHILE,
+            OP_REP, PROCEDIMENT, ENDPROCEDIMENT,
+            FUNCIO, ENDFUNCIO, TORNAR, CONST,
+            OP_TIPUS_CADENA, OP_TIPUS_TUPLA,
+            OP_TIPUS_ENTER, OP_TIPUS_LOGIC,
+            PLUS, MINUS, TIMES, DIVIDE,
+            EQ, NE, LT, LE, GT, GE, INPUT, OUTPUT,
+            AND, OR, NOT, ASSIGNACIO, OBR_PAR,
+            TANC_PAR, OBR_CORX, TANC_CORX, DOS_PUNTS,
+            COMA, PUNT_COMA, COMENTARI, ERROR;
+terminal Double ENTER;
+terminal Boolean VALOR_LOGIC;
+terminal String ID, CADENA;
+
+non terminal program, decls, methods, instrs;
+non terminal decl, instr, method;
+non terminal tipus, list_id, assig, expr;
+non terminal tupla_def, tupla_camp_list;
+non terminal arg, args, cond, optional_cond, call;
+non terminal cas_opcions, cas_opcio, loop, entrada, sortida;
+non terminal terme, op_arit, op_rel, op_log;
+
+// Associativitat i precedència dels operadors
+precedence left OR;            // OR més baix que AND
+precedence left AND;           // AND més baix que comparacions
+
+precedence nonassoc EQ, NE, LT, LE, GT, GE;   // comparadors no associatius
+
+precedence left PLUS, MINUS;    // suma i resta associatius a l'esquerra
+precedence left TIMES, DIVIDE;  // multiplicació i divisió associatius a l'esquerra
+
+precedence right NOT;          // negació (NOT) té associativitat a la dreta
+
+
+start with program;
+
+program ::= PRINCIPAL ID DOS_PUNTS decls:d methods:m instrs:i ENDPRINCIPAL
+            {: :}
+;
+
+decls ::= decl:d decls:ds
+            {: :}
+        | /* buit */
+;
+
+decl ::= tipus:t list_id:l assig:a
+            {: :}
+        | CONST tipus:t list_id:l ASSIGNACIO expr:e
+;
+
+methods ::= method:m methods:ms
+            {: :}
+        | /* buit */
+;
+
+method ::= FUNCIO tipus:t ID:i OBR_PAR args:a TANC_PAR DOS_PUNTS decls:d instrs:i TORNAR expr:e ENDFUNCIO
+            {: :}
+        | PROCEDIMENT ID:i OBR_PAR args:a TANC_PAR DOS_PUNTS decls:d instrs:i ENDPROCEDIMENT
+            {: :}
+;
+
+instrs ::= instr:i PUNT_COMA instrs:is
+            {: :}
+        | /* buit */
+;
+
+instr ::= call:c
+            {: :}
+        | cond:c
+            {: :}
+        | loop:l
+            {: :}
+        | entrada:e
+            {: :}
+        | sortida:s
+            {: :}
+        | decl:d
+            {: :}
+;
+
+call ::= ID:id OBR_PAR args:a TANC_PAR
+            {: :}
+;
+
+cond ::= OP_IF OBR_PAR expr:e TANC_PAR OP_THEN instrs:i optional_cond
+            {: :}
+        | OP_SWITCH ID:id DOS_PUNTS cas_opcions DEFAULT_SWITCH DOS_PUNTS instrs:i OP_ENDSWITCH
+;
+
+optional_cond ::= OP_ELSE instrs:i OP_ENDIF
+            {: :}
+        | OP_ENDIF
+            {: :}
+;
+
+cas_opcions ::= cas_opcio:c cas_opcions:cs
+            {: :}
+        | cas_opcio:c
+            {: :}
+;
+
+cas_opcio ::= terme:t DOS_PUNTS instrs:i
+            {: :}
+;
+
+loop ::= OP_WHILE OBR_PAR expr:e TANC_PAR OP_DO instrs:i OP_ENDWHILE
+            {: :}
+        | OP_DO instrs:i OP_REP OBR_PAR expr:e TANC_PAR
+            {: :}
+;
+
+entrada ::= INPUT OBR_PAR ID:i TANC_PAR
+            {: :}
+;
+
+sortida ::= OUTPUT OBR_PAR expr:e TANC_PAR
+            {: :}
+;
+
+tipus ::= OP_TIPUS_ENTER
+            {: :}
+        | OP_TIPUS_CADENA
+            {: :}
+        | OP_TIPUS_LOGIC
+            {: :}
+        | OP_TIPUS_TUPLA tupla_def:td
+            {: :}
+;
+
+tupla_def ::= OBR_PAR tupla_camp_list:tcl TANC_PAR
+            {: :}
+;
+
+tupla_camp_list ::= arg:a COMA tupla_camp_list:tcl
+            {: :}
+        | arg:a
+            {: :}
+;
+
+list_id ::= ID:id COMA list_id:l
+            {: :}
+        | ID:id
+            {: :}
+;
+
+args ::= arg:a COMA args:as
+            {: :}
+        | arg: a
+            {: :}
+        | /* buit */
+;
+
+arg ::= ID:id DOS_PUNTS tipus:t
+            {: :}
+;
+
+assig ::= ASSIGNACIO expr:e
+            {: :}
+        | /* buit */
+;
+
+expr ::= expr:e op_arit:op terme:t
+            {: :}
+        | expr:e op_rel:op terme:t
+            {: :}
+        | expr:e op_log:op terme:t
+            {: :}
+        | OBR_PAR expr:e TANC_PAR
+            {: :}
+        | NOT expr:e
+            {: :}
+        | terme:t
+            {: :}
+;
+
+terme ::= VALOR_LOGIC:vl
+            {: :}
+        | ENTER:e
+            {: :}
+        | ID:i
+            {: :}
+        | CADENA:c
+            {: :}
+        | call:c
+            {: :}
+;
+
+op_arit ::= PLUS
+            {: :}
+        | MINUS
+            {: :}
+        | TIMES
+            {: :}
+        | DIVIDE
+            {: :}
+;
+
+op_rel ::= EQ
+            {: :}
+        | NE
+            {: :}
+        | LT
+            {: :}
+        | LE
+            {: :}
+        | GT
+            {: :}
+        | GE
+            {: :}
+;
+
+op_log ::= AND
+            {: :}
+        | OR
+            {: :}
+;
+
+
+
+
+
+
+
+
+
+
