@@ -1,7 +1,8 @@
 package symbols;
 
 import java.util.List;
-public abstract class MethodNode extends Node {
+
+public class MethodNode extends Node {
     public boolean isFunction; // mirar si es pot llevar
     public String name;
     public TypeNode returnType;

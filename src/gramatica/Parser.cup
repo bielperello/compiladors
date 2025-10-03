@@ -5,6 +5,9 @@
  * Curs: 2025-2026
  *
  * Professor: Pere Palmer
+ *
+ * Generar:
+ * java -jar java-cup-11b.jar -expect 22 -parser Parser -symbols ParserSym -destdir gen src/gramatica/Parser.cup
  */
 import java_cup.runtime.*;
 import symbols.*;
@@ -13,14 +16,16 @@ import java.util.*;
 
 class Parser;
 
-/*
 parser code {:
-    private Scanner scanner;
-    public Parser(Scanner scanner) {
-        this.scanner = scanner;
+    private int line(java_cup.runtime.Symbol s) {
+        return s.left;
+    }
+
+    private int column(java_cup.runtime.Symbol s) {
+        return s.right;
     }
 :}
-*/
+
 
 terminal    PRINCIPAL, ENDPRINCIPAL,
             OP_IF, OP_THEN, OP_ELSE, OP_ENDIF,
@@ -39,13 +44,24 @@ terminal Double ENTER;
 terminal Boolean VALOR_LOGIC;
 terminal String ID, CADENA;
 
-non terminal program, decls, methods, instrs;
-non terminal decl, instr, method;
-non terminal tipus, list_id, assig, expr;
-non terminal tupla_def, tupla_camp_list;
-non terminal arg, args, cond, optional_cond, call;
-non terminal cas_opcions, cas_opcio, loop, entrada, sortida;
-non terminal terme, op_arit, op_rel, op_log;
+non terminal ProgramNode program;
+non terminal List<DeclNode> decls;
+non terminal List<MethodNode> methods;
+non terminal List<InstrNode> instrs, optional_cond;
+non terminal DeclNode decl;
+non terminal InstrNode instr,  entrada, sortida;
+non terminal InstrNode.CallNode call;
+non terminal CondNode cond;
+non terminal CondNode.SwitchNode.CaseNode cas_opcio;
+non terminal LoopNode loop;
+non terminal MethodNode method;
+non terminal TypeNode tipus, tupla_def;
+non terminal ExprNode assig, expr, terme;
+non terminal ArgNode arg;
+non terminal List<ArgNode> args, tupla_camp_list;
+non terminal List<CondNode.SwitchNode.CaseNode> cas_opcions;
+non terminal String op_arit, op_rel, op_log;
+non terminal List<String> list_id;
 
 // Associativitat i precedència dels operadors
 precedence left OR;            // OR més baix que AND
@@ -58,12 +74,11 @@ precedence left TIMES, DIVIDE;  // multiplicació i divisió associatius a l'esq
 
 precedence right NOT;          // negació (NOT) té associativitat a la dreta
 
-
 start with program;
 
-program ::= PRINCIPAL ID:id DOS_PUNTS decls:d methods:m instrs:i ENDPRINCIPAL
+program ::= PRINCIPAL:p ID:id DOS_PUNTS decls:d methods:m instrs:i ENDPRINCIPAL
             {:
-                RESULT = new ProgramNode(id, d, m, i, line($1), column($1));
+                RESULT = new ProgramNode(id, d, m, i, line((Symbol)p), column((Symbol)p));
             :}
 ;
 
@@ -82,11 +97,11 @@ decls ::= decl:d decls:ds
 
 decl ::= tipus:t list_id:l assig:a
             {:
-                RESULT = new DeclNode(false, t, l, a, line($1), column($1));
+                RESULT = new DeclNode(false, t, l, a, line((Symbol)t), column((Symbol)t));
             :}
-        | CONST tipus:t list_id:l ASSIGNACIO expr:e
+        | CONST:c tipus:t list_id:l ASSIGNACIO expr:e
             {:
-                RESULT = new DeclNode(true, t, l, e, line($1), column($1));
+                RESULT = new DeclNode(true, t, l, e, line((Symbol)c), column((Symbol)c));
             :}
 ;
 
@@ -103,13 +118,13 @@ methods ::= method:m methods:ms
             :}
 ;
 
-method ::= FUNCIO tipus:t ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS decls:d instrs:i TORNAR expr:e ENDFUNCIO
+method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS decls:d instrs:i TORNAR expr:e ENDFUNCIO
             {:
-                RESULT = new MethodNode(true, id, t, a, d, i, e, line($1), column($1));
+                RESULT = new MethodNode(true, id, t, a, d, i, e, line((Symbol)f), column((Symbol)f));
             :}
-        | PROCEDIMENT ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS decls:d instrs:i ENDPROCEDIMENT
+        | PROCEDIMENT:p ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS decls:d instrs:i ENDPROCEDIMENT
             {:
-                RESULT = new MethodNode(true, id, t, a, d, i, null, line($1), column($1));
+                RESULT = new MethodNode(true, id, null, a, d, i, null, line((Symbol)p), column((Symbol)p));
             :}
 ;
 
@@ -148,23 +163,23 @@ instr ::= call:c
             :}
         | decl:d
             {:
-                RESULT = d;
+                RESULT = new InstrNode.InstrDeclNode(d);
             :}
 ;
 
 call ::= ID:id OBR_PAR args:a TANC_PAR
             {:
-                RESULT = new InstrNode.CallNode(id, a, line($1), column($1));
+                RESULT = new InstrNode.CallNode(id, a, line((Symbol)id), column((Symbol)id));
             :}
 ;
 
-cond ::= OP_IF OBR_PAR expr:e TANC_PAR OP_THEN instrs:i optional_cond:o
+cond ::= OP_IF:op OBR_PAR expr:e TANC_PAR OP_THEN instrs:i optional_cond:o
             {:
-                RESULT = new CondNode.IfNode(e, i, o, line($1), column($1));
+                RESULT = new CondNode.IfNode(e, i, o, line((Symbol)op), column((Symbol)op));
             :}
-        | OP_SWITCH ID:id DOS_PUNTS cas_opcions:c DEFAULT_SWITCH DOS_PUNTS instrs:i OP_ENDSWITCH
+        | OP_SWITCH:s ID:id DOS_PUNTS cas_opcions:c DEFAULT_SWITCH DOS_PUNTS instrs:i OP_ENDSWITCH
             {:
-                RESULT = new CondNode.SwitchNode(id, c, i, line($1), column($1));
+                RESULT = new CondNode.SwitchNode(id, c, i, line((Symbol)s), column((Symbol)s));
             :}
 ;
 
@@ -195,43 +210,43 @@ cas_opcions ::= cas_opcio:c cas_opcions:cs
 
 cas_opcio ::= terme:t DOS_PUNTS instrs:i
             {:
-                RESULT = new CondNode.SwitchNode.CaseNode(t, i, line($1), column($1));
+                RESULT = new CondNode.SwitchNode.CaseNode(t, i, line((Symbol)t), column((Symbol)t));
             :}
 ;
 
-loop ::= OP_WHILE OBR_PAR expr:e TANC_PAR OP_DO instrs:i OP_ENDWHILE
+loop ::= OP_WHILE:w OBR_PAR expr:e TANC_PAR OP_DO instrs:i OP_ENDWHILE
             {:
-                RESULT = new LoopNode.WhileNode(e, i, line($1), column($1));
+                RESULT = new LoopNode.WhileNode(e, i, line((Symbol)w), column((Symbol)w));
             :}
-        | OP_DO instrs:i OP_REP OBR_PAR expr:e TANC_PAR
+        | OP_DO:d instrs:i OP_REP OBR_PAR expr:e TANC_PAR
             {:
-                RESULT = new LoopNode.DoWhileNode(e, i, line($1), column($1));
-            :}
-;
-
-entrada ::= INPUT OBR_PAR ID:id TANC_PAR
-            {:
-                RESULT = new InstrNode.InputNode(id, line($1), column($1));
+                RESULT = new LoopNode.DoWhileNode(e, i, line((Symbol)d), column((Symbol)d));
             :}
 ;
 
-sortida ::= OUTPUT OBR_PAR expr:e TANC_PAR
+entrada ::= INPUT:i OBR_PAR ID:id TANC_PAR
             {:
-                RESULT = new InstrNode.OutputNode(e, line($1), column($1));
+                RESULT = new InstrNode.InputNode(id, line((Symbol)i), column((Symbol)i));
             :}
 ;
 
-tipus ::= OP_TIPUS_ENTER
+sortida ::= OUTPUT:o OBR_PAR expr:e TANC_PAR
             {:
-                RESULT = new TypeNode(TypeNode.Kind.INT, line($1), column($1));
+                RESULT = new InstrNode.OutputNode(e, line((Symbol)o), column((Symbol)o));
             :}
-        | OP_TIPUS_CADENA
+;
+
+tipus ::= OP_TIPUS_ENTER:op
             {:
-                RESULT = new TypeNode(TypeNode.Kind.STRING, line($1), column($1));
+                RESULT = new TypeNode(TypeNode.Kind.INT, line((Symbol)op), column((Symbol)op));
             :}
-        | OP_TIPUS_LOGIC
+        | OP_TIPUS_CADENA:op
             {:
-                RESULT = new TypeNode(TypeNode.Kind.BOOL, line($1), column($1));
+                RESULT = new TypeNode(TypeNode.Kind.STRING, line((Symbol)op), column((Symbol)op));
+            :}
+        | OP_TIPUS_LOGIC:op
+            {:
+                RESULT = new TypeNode(TypeNode.Kind.BOOL, line((Symbol)op), column((Symbol)op));
             :}
         | OP_TIPUS_TUPLA tupla_def:td
             {:
@@ -239,9 +254,9 @@ tipus ::= OP_TIPUS_ENTER
             :}
 ;
 
-tupla_def ::= OBR_PAR tupla_camp_list:tcl TANC_PAR
+tupla_def ::= OBR_PAR:o tupla_camp_list:tcl TANC_PAR
             {:
-                RESULT = new TypeNode(tcl, line($1), column($1));
+                RESULT = new TypeNode(tcl, line((Symbol)o), column((Symbol)o));
             :}
 ;
 
@@ -296,7 +311,7 @@ args ::= arg:a COMA args:as
 
 arg ::= ID:id DOS_PUNTS tipus:t
             {:
-                RESULT = new ArgNode(id, t, line($1), column($1));
+                RESULT = new ArgNode(id, t, line((Symbol)id), column((Symbol)id));
             :}
 ;
 
@@ -312,23 +327,23 @@ assig ::= ASSIGNACIO expr:e
 
 expr ::= expr:e op_arit:op terme:t
             {:
-                RESULT = new ExprNode.BinaryOpNode(e, op, t, line($1), column($1));
+                RESULT = new ExprNode.BinaryOpNode(e, op, t, line((Symbol)e), column((Symbol)e));
             :}
         | expr:e op_rel:op terme:t
             {:
-                RESULT = new ExprNode.BinaryOpNode(e, op, t, line($1), column($1));
+                RESULT = new ExprNode.BinaryOpNode(e, op, t, line((Symbol)e), column((Symbol)e));
             :}
         | expr:e op_log:op terme:t
             {:
-                RESULT = new ExprNode.BinaryOpNode(e, op, t, line($1), column($1));
+                RESULT = new ExprNode.BinaryOpNode(e, op, t, line((Symbol)e), column((Symbol)e));
             :}
         | OBR_PAR expr:e TANC_PAR
             {:
                 RESULT = e;
             :}
-        | NOT expr:e
+        | NOT:n expr:e
             {:
-                RESULT = new ExprNode.UnaryOpNode("NOT", e, line($1), column($1));
+                RESULT = new ExprNode.UnaryOpNode("NOT", e, line((Symbol)n), column((Symbol)n));
             :}
         | terme:t
             {:
@@ -338,23 +353,23 @@ expr ::= expr:e op_arit:op terme:t
 
 terme ::= VALOR_LOGIC:vl
             {:
-                RESULT = new ExprNode.LiteralNode(vl, line($1), column($1));
+                RESULT = new ExprNode.LiteralNode(vl, line((Symbol)vl), column((Symbol)vl));
             :}
         | ENTER:e
             {:
-                RESULT = new ExprNode.LiteralNode(e, line($1), column($1));
+                RESULT = new ExprNode.LiteralNode(e, line((Symbol)e), column((Symbol)e));
             :}
         | ID:i
             {:
-                RESULT = new ExprNode.VarNode(i, line($1), column($1));
+                RESULT = new ExprNode.VarNode(i, line((Symbol)i), column((Symbol)i));
             :}
         | CADENA:c
             {:
-                RESULT = new ExprNode.LiteralNode(c, line($1), column($1));
+                RESULT = new ExprNode.LiteralNode(c, line((Symbol)c), column((Symbol)c));
             :}
         | call:c
             {:
-                RESULT = new ExprInstrNode(c);
+                RESULT = new ExprNode.ExprInstrNode(c);
             :}
 ;
 

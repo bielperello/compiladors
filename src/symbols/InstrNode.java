@@ -61,4 +61,18 @@ public abstract class InstrNode extends Node {
             System.out.println("output( EXPRESSIÓ );");
         }
     }
+
+    public static class InstrDeclNode extends InstrNode {
+        private DeclNode decl;
+
+        public InstrDeclNode(DeclNode decl) {
+            super(decl.line, decl.column);
+            this.decl = decl;
+        }
+
+        @Override
+        public void generateCode() {
+            decl.generateCode();
+        }
+    }
 }

@@ -4,6 +4,7 @@
  * Professor: Pere Palmer
  *
  * Compilació:
+ * java -jar jflex-full-1.9.1.jar -d gen src/gramatica/Lexer.flex
  */
 
 import java.io.FileNotFoundException;
@@ -91,7 +92,7 @@ comentari = ##.*
 "["                  { return symbol(ParserSym.OBR_CORX); }
 "]"                  { return symbol(ParserSym.TANC_CORX); }
 ","                  { return symbol(ParserSym.COMA);}
-";"                  { return symbol(ParserSym.PUNT_COMA)}
+";"                  { return symbol(ParserSym.PUNT_COMA); }
 
 
 {op_aritmetic}       {
