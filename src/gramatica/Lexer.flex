@@ -159,9 +159,9 @@ comentari = ##.*
                        lexema = lexema.substring(1, lexema.length()-1);
                        return symbol(ParserSym.CADENA, lexema);
                      }
-{valor_logic}        { return symbol(ParserSym.VALOR_LOGIC, yytext().equals("cert"));}
-{id}                 { return symbol(ParserSym.ID, yytext()); }
-{nombre}             { return symbol(ParserSym.ENTER, Double.parseDouble(yytext())); }
+{valor_logic}        { return symbol(ParserSym.VALOR_LOGIC, this.yytext().equals("cert"));}
+{id}                 { return symbol(ParserSym.ID, this.yytext()); }
+{nombre}             { return symbol(ParserSym.ENTER, Double.parseDouble(this.yytext())); }
 
 // ERROR
-.                    { return symbol(ParserSym.ERROR, yytext()); }
+.                    { return symbol(ParserSym.ERROR, this.yytext()); }

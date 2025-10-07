@@ -1,5 +1,7 @@
 package symbols;
 
+import java_cup.runtime.Symbol;
+
 import java.util.List;
 
 public abstract class InstrNode extends Node {
@@ -15,10 +17,10 @@ public abstract class InstrNode extends Node {
 
     public static class CallNode extends InstrNode {
         public String functionName;
-        public List<ExprNode> args;
+        public List<ArgNode> args;
 
-        public CallNode(String functionName, List<ExprNode> args, int line, int column) {
-            super(line, column);
+        public CallNode(String functionName, List<ArgNode> args) {
+            super(args.getFirst().line, args.getFirst().column);
             this.functionName = functionName;
             this.args = args;
         }

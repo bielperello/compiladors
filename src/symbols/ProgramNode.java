@@ -1,5 +1,7 @@
 package symbols;
 
+import java_cup.runtime.Symbol;
+
 import java.util.List;
 
 public class ProgramNode extends Node {

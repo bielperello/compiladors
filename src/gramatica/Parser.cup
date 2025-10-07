@@ -18,16 +18,42 @@ class Parser;
 
 parser code {:
     private int line(java_cup.runtime.Symbol s) {
+        if(s == null) return safeLine(s);
         return s.left;
     }
 
     private int column(java_cup.runtime.Symbol s) {
+        if (s == null) return safeColumn(s);
         return s.right;
     }
+
+    private int safeLine(Symbol s) {
+        return (s != null && s.left >= 0) ? s.left : 0;
+    }
+
+    private int safeColumn(Symbol s) {
+        return (s != null && s.right >= 0) ? s.right : 0;
+    }
+
+
+    public <T> List<T> combinar(T first, List<T> rest) {
+        List<T> list = new ArrayList<>();
+        list.add(first);
+        if (rest != null) list.addAll(rest);
+        return list;
+    }
+
+    public <T> List<T> crearLlista(T item) {
+        List<T> list = new ArrayList<>();
+        list.add(item);
+        return list;
+    }
+
+    public static SymbolTable currentScope = new SymbolTable(null);
 :}
 
-
-terminal    PRINCIPAL, ENDPRINCIPAL,
+terminal Symbol
+            PRINCIPAL, ENDPRINCIPAL,
             OP_IF, OP_THEN, OP_ELSE, OP_ENDIF,
             OP_SWITCH, DEFAULT_SWITCH, OP_ENDSWITCH,
             OP_WHILE, OP_DO, OP_ENDWHILE,
@@ -40,9 +66,10 @@ terminal    PRINCIPAL, ENDPRINCIPAL,
             AND, OR, NOT, ASSIGNACIO, OBR_PAR,
             TANC_PAR, OBR_CORX, TANC_CORX, DOS_PUNTS,
             COMA, PUNT_COMA, COMENTARI, ERROR;
+
+terminal String ID, CADENA;
 terminal Double ENTER;
 terminal Boolean VALOR_LOGIC;
-terminal String ID, CADENA;
 
 non terminal ProgramNode program;
 non terminal List<DeclNode> decls;
@@ -61,7 +88,7 @@ non terminal ArgNode arg;
 non terminal List<ArgNode> args, tupla_camp_list;
 non terminal List<CondNode.SwitchNode.CaseNode> cas_opcions;
 non terminal String op_arit, op_rel, op_log;
-non terminal List<String> list_id;
+non terminal List<ExprNode.VarNode> list_id;
 
 // Associativitat i precedència dels operadors
 precedence left OR;            // OR més baix que AND
@@ -78,16 +105,13 @@ start with program;
 
 program ::= PRINCIPAL:p ID:id DOS_PUNTS decls:d methods:m instrs:i ENDPRINCIPAL
             {:
-                RESULT = new ProgramNode(id, d, m, i, line((Symbol)p), column((Symbol)p));
+                RESULT = new ProgramNode(id, d, m, i, line(p), column(p));
             :}
 ;
 
 decls ::= decl:d decls:ds
             {:
-                List<DeclNode> list = new ArrayList<>();
-                list.add(d);
-                if (ds != null) list.addAll(ds);
-                RESULT = list;
+                RESULT = combinar(d, ds);
             :}
         | /* buit */
             {:
@@ -97,20 +121,35 @@ decls ::= decl:d decls:ds
 
 decl ::= tipus:t list_id:l assig:a
             {:
-                RESULT = new DeclNode(false, t, l, a, line((Symbol)t), column((Symbol)t));
+                DeclNode d = new DeclNode(false, t, l, a);
+                for(ExprNode.VarNode var : l) {
+                    Simbol s = new Simbol(var.name, d.type, d.isConst, var.line, var.column);
+
+                    if (!currentScope.add(s)) {
+                        ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
+                            "Variable ja declarada: " + var.name));
+                    }
+                }
+                RESULT = d;
             :}
         | CONST:c tipus:t list_id:l ASSIGNACIO expr:e
             {:
-                RESULT = new DeclNode(true, t, l, e, line((Symbol)c), column((Symbol)c));
+                DeclNode d = new DeclNode(true, t, l, e, line(c), column(c));
+                for(ExprNode.VarNode var : l) {
+                    Simbol s = new Simbol(var.name, d.type, d.isConst, var.line, var.column);
+
+                    if (!currentScope.add(s)) {
+                        ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
+                            "Constant ja declarada: " + var.name));
+                    }
+                }
+                RESULT = d;
             :}
 ;
 
 methods ::= method:m methods:ms
             {:
-                List<MethodNode> list = new ArrayList<>();
-                list.add(m);
-                if (ms != null) list.addAll(ms);
-                RESULT = list;
+                RESULT = combinar(m, ms);
             :}
         | /* buit */
             {:
@@ -120,20 +159,45 @@ methods ::= method:m methods:ms
 
 method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS decls:d instrs:i TORNAR expr:e ENDFUNCIO
             {:
-                RESULT = new MethodNode(true, id, t, a, d, i, e, line((Symbol)f), column((Symbol)f));
+                SymbolTable oldScope = currentScope;
+                currentScope = new SymbolTable(oldScope);
+
+                Simbol s = new Simbol(id, t, false, Simbol.Methods.FUNCIO, line(f), column(f));
+
+                MethodNode m = new MethodNode(true, id, t, a, d, i, e, line(f), column(f), currentScope);
+
+                if (!currentScope.add(s)) {
+                    ErrorManager.add(new CompilerError(line(f), column(f), CompilerError.TYPE.SEMANTIC,
+                        "Nom ja utilitzat: " + id));
+                }
+
+                currentScope = oldScope;
+
+                RESULT = m;
             :}
         | PROCEDIMENT:p ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS decls:d instrs:i ENDPROCEDIMENT
             {:
-                RESULT = new MethodNode(true, id, null, a, d, i, null, line((Symbol)p), column((Symbol)p));
+                SymbolTable oldScope = currentScope;
+                currentScope = new SymbolTable(oldScope);
+
+                Simbol s = new Simbol(id, null, false, Simbol.Methods.PROCEDIMENT, line(p), column(p));
+
+                MethodNode m = new MethodNode(true, id, null, a, d, i, null, line(p), column(p), currentScope);
+
+                if (!currentScope.add(s)) {
+                    ErrorManager.add(new CompilerError(line(p), column(p), CompilerError.TYPE.SEMANTIC,
+                        "Nom ja utilitzat: " + id));
+                }
+
+                currentScope = oldScope;
+
+                RESULT = m;
             :}
 ;
 
 instrs ::= instr:i PUNT_COMA instrs:is
             {:
-                List<InstrNode> list = new ArrayList<>();
-                list.add(i);
-                if (is != null) list.addAll(is);
-                RESULT = list;
+                RESULT = combinar(i, is);
             :}
         | /* buit */
             {:
@@ -169,17 +233,17 @@ instr ::= call:c
 
 call ::= ID:id OBR_PAR args:a TANC_PAR
             {:
-                RESULT = new InstrNode.CallNode(id, a, line((Symbol)id), column((Symbol)id));
+                RESULT = new InstrNode.CallNode(id, a);
             :}
 ;
 
 cond ::= OP_IF:op OBR_PAR expr:e TANC_PAR OP_THEN instrs:i optional_cond:o
             {:
-                RESULT = new CondNode.IfNode(e, i, o, line((Symbol)op), column((Symbol)op));
+                RESULT = new CondNode.IfNode(e, i, o, line(op), column(op));
             :}
         | OP_SWITCH:s ID:id DOS_PUNTS cas_opcions:c DEFAULT_SWITCH DOS_PUNTS instrs:i OP_ENDSWITCH
             {:
-                RESULT = new CondNode.SwitchNode(id, c, i, line((Symbol)s), column((Symbol)s));
+                RESULT = new CondNode.SwitchNode(id, c, i, line(s), column(s));
             :}
 ;
 
@@ -195,58 +259,53 @@ optional_cond ::= OP_ELSE instrs:i OP_ENDIF
 
 cas_opcions ::= cas_opcio:c cas_opcions:cs
             {:
-                List<CondNode.SwitchNode.CaseNode> list = new ArrayList<>();
-                list.add(c);
-                list.addAll(cs);
-                RESULT = list;
+                RESULT = combinar(c, cs);
             :}
         | cas_opcio:c
             {:
-                List<CondNode.SwitchNode.CaseNode> list = new ArrayList<>();
-                list.add(c);
-                RESULT = list;
+                RESULT = crearLlista(c);
             :}
 ;
 
 cas_opcio ::= terme:t DOS_PUNTS instrs:i
             {:
-                RESULT = new CondNode.SwitchNode.CaseNode(t, i, line((Symbol)t), column((Symbol)t));
+                RESULT = new CondNode.SwitchNode.CaseNode(t, i);
             :}
 ;
 
 loop ::= OP_WHILE:w OBR_PAR expr:e TANC_PAR OP_DO instrs:i OP_ENDWHILE
             {:
-                RESULT = new LoopNode.WhileNode(e, i, line((Symbol)w), column((Symbol)w));
+                RESULT = new LoopNode.WhileNode(e, i, line(w), column(w));
             :}
         | OP_DO:d instrs:i OP_REP OBR_PAR expr:e TANC_PAR
             {:
-                RESULT = new LoopNode.DoWhileNode(e, i, line((Symbol)d), column((Symbol)d));
+                RESULT = new LoopNode.DoWhileNode(i, e, line(d), column(d));
             :}
 ;
 
 entrada ::= INPUT:i OBR_PAR ID:id TANC_PAR
             {:
-                RESULT = new InstrNode.InputNode(id, line((Symbol)i), column((Symbol)i));
+                RESULT = new InstrNode.InputNode(id, line(i), column(i));
             :}
 ;
 
 sortida ::= OUTPUT:o OBR_PAR expr:e TANC_PAR
             {:
-                RESULT = new InstrNode.OutputNode(e, line((Symbol)o), column((Symbol)o));
+                RESULT = new InstrNode.OutputNode(e, line(o), column(o));
             :}
 ;
 
 tipus ::= OP_TIPUS_ENTER:op
             {:
-                RESULT = new TypeNode(TypeNode.Kind.INT, line((Symbol)op), column((Symbol)op));
+                RESULT = new TypeNode(TypeNode.Kind.INT, line(op), column(op));
             :}
         | OP_TIPUS_CADENA:op
             {:
-                RESULT = new TypeNode(TypeNode.Kind.STRING, line((Symbol)op), column((Symbol)op));
+                RESULT = new TypeNode(TypeNode.Kind.STRING, line(op), column(op));
             :}
         | OP_TIPUS_LOGIC:op
             {:
-                RESULT = new TypeNode(TypeNode.Kind.BOOL, line((Symbol)op), column((Symbol)op));
+                RESULT = new TypeNode(TypeNode.Kind.BOOL, line(op), column(op));
             :}
         | OP_TIPUS_TUPLA tupla_def:td
             {:
@@ -256,52 +315,37 @@ tipus ::= OP_TIPUS_ENTER:op
 
 tupla_def ::= OBR_PAR:o tupla_camp_list:tcl TANC_PAR
             {:
-                RESULT = new TypeNode(tcl, line((Symbol)o), column((Symbol)o));
+                RESULT = new TypeNode(tcl, line(o), column(o));
             :}
 ;
 
 tupla_camp_list ::= arg:a COMA tupla_camp_list:tcl
             {:
-                List<ArgNode> list = new ArrayList<>();
-                list.add(a);
-                list.addAll(tcl);
-                RESULT = list;
+                RESULT = combinar(a, tcl);
             :}
         | arg:a
             {:
-                List<ArgNode> list = new ArrayList<>();
-                list.add(a);
-                RESULT = list;
+                RESULT = crearLlista(a);
             :}
 ;
 
 list_id ::= ID:id COMA list_id:l
             {:
-                List<String> list = new ArrayList<>();
-                list.add(id);
-                list.addAll(l);
-                RESULT = list;
+                RESULT = combinar(new ExprNode.VarNode(id), l);
             :}
         | ID:id
             {:
-                List<String> list = new ArrayList<>();
-                list.add(id);
-                RESULT = list;
+                RESULT = crearLlista(new ExprNode.VarNode(id));
             :}
 ;
 
 args ::= arg:a COMA args:as
             {:
-                List<ArgNode> list = new ArrayList<>();
-                list.add(a);
-                if(as != null) list.addAll(as);
-                RESULT = list;
+                RESULT = combinar(a, as);
             :}
         | arg: a
             {:
-                List<ArgNode> list = new ArrayList<>();
-                list.add(a);
-                RESULT = list;
+                RESULT = crearLlista(a);
             :}
         | /* buit */
             {:
@@ -311,7 +355,7 @@ args ::= arg:a COMA args:as
 
 arg ::= ID:id DOS_PUNTS tipus:t
             {:
-                RESULT = new ArgNode(id, t, line((Symbol)id), column((Symbol)id));
+                RESULT = new ArgNode(new ExprNode.VarNode(id), t);
             :}
 ;
 
@@ -327,15 +371,15 @@ assig ::= ASSIGNACIO expr:e
 
 expr ::= expr:e op_arit:op terme:t
             {:
-                RESULT = new ExprNode.BinaryOpNode(e, op, t, line((Symbol)e), column((Symbol)e));
+                RESULT = new ExprNode.BinaryOpNode(e, op, t);
             :}
         | expr:e op_rel:op terme:t
             {:
-                RESULT = new ExprNode.BinaryOpNode(e, op, t, line((Symbol)e), column((Symbol)e));
+                RESULT = new ExprNode.BinaryOpNode(e, op, t);
             :}
         | expr:e op_log:op terme:t
             {:
-                RESULT = new ExprNode.BinaryOpNode(e, op, t, line((Symbol)e), column((Symbol)e));
+                RESULT = new ExprNode.BinaryOpNode(e, op, t);
             :}
         | OBR_PAR expr:e TANC_PAR
             {:
@@ -343,7 +387,7 @@ expr ::= expr:e op_arit:op terme:t
             :}
         | NOT:n expr:e
             {:
-                RESULT = new ExprNode.UnaryOpNode("NOT", e, line((Symbol)n), column((Symbol)n));
+                RESULT = new ExprNode.UnaryOpNode("NOT", e, line(n), column(n));
             :}
         | terme:t
             {:
@@ -353,19 +397,19 @@ expr ::= expr:e op_arit:op terme:t
 
 terme ::= VALOR_LOGIC:vl
             {:
-                RESULT = new ExprNode.LiteralNode(vl, line((Symbol)vl), column((Symbol)vl));
+                RESULT = new ExprNode.LiteralNode(vl);
             :}
         | ENTER:e
             {:
-                RESULT = new ExprNode.LiteralNode(e, line((Symbol)e), column((Symbol)e));
+                RESULT = new ExprNode.LiteralNode(e);
             :}
         | ID:i
             {:
-                RESULT = new ExprNode.VarNode(i, line((Symbol)i), column((Symbol)i));
+                RESULT = new ExprNode.VarNode(i);
             :}
         | CADENA:c
             {:
-                RESULT = new ExprNode.LiteralNode(c, line((Symbol)c), column((Symbol)c));
+                RESULT = new ExprNode.LiteralNode(c);
             :}
         | call:c
             {:

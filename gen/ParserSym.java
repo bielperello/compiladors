@@ -6,7 +6,7 @@
 /** CUP generated class containing symbol constants. */
 public class ParserSym {
   /* terminals */
-  public static final int ENTER = 50;
+  public static final int ENTER = 52;
   public static final int DIVIDE = 28;
   public static final int OP_REP = 14;
   public static final int OP_ENDWHILE = 13;
@@ -36,7 +36,7 @@ public class ParserSym {
   public static final int PROCEDIMENT = 15;
   public static final int PLUS = 25;
   public static final int FUNCIO = 17;
-  public static final int ID = 52;
+  public static final int ID = 50;
   public static final int OBR_PAR = 41;
   public static final int LE = 32;
   public static final int EOF = 0;
@@ -44,7 +44,7 @@ public class ParserSym {
   public static final int OP_ENDSWITCH = 10;
   public static final int OP_TIPUS_CADENA = 21;
   public static final int COMA = 46;
-  public static final int CADENA = 53;
+  public static final int CADENA = 51;
   public static final int DEFAULT_SWITCH = 9;
   public static final int OP_TIPUS_LOGIC = 24;
   public static final int COMENTARI = 48;
@@ -54,7 +54,7 @@ public class ParserSym {
   public static final int OP_IF = 4;
   public static final int TIMES = 27;
   public static final int OP_TIPUS_ENTER = 23;
-  public static final int VALOR_LOGIC = 51;
+  public static final int VALOR_LOGIC = 53;
   public static final int OP_SWITCH = 8;
   public static final int NE = 30;
   public static final int PUNT_COMA = 47;
@@ -111,10 +111,10 @@ public class ParserSym {
   "PUNT_COMA",
   "COMENTARI",
   "ERROR",
-  "ENTER",
-  "VALOR_LOGIC",
   "ID",
-  "CADENA"
+  "CADENA",
+  "ENTER",
+  "VALOR_LOGIC"
   };
 }
 

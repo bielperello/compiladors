@@ -1,17 +1,19 @@
 package symbols;
 
+import java_cup.runtime.Symbol;
+
 public class ArgNode extends Node{
-    public String name;
+    public ExprNode.VarNode var;
     public TypeNode type;
 
-    public ArgNode(String name, TypeNode type, int line, int column) {
-        super(line, column);
-        this.name = name;
+    public ArgNode(ExprNode.VarNode var, TypeNode type) {
+        super(type.line, type.column);
+        this.var = var;
         this.type = type;
     }
 
     @Override
     public void generateCode() {
-        System.out.println(type + " " + name);
+        System.out.println(type + " " + var.name);
     }
 }

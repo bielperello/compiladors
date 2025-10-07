@@ -1,5 +1,7 @@
 package symbols;
 
+import java_cup.runtime.Symbol;
+
 public abstract class ExprNode extends Node {
     public ExprNode(int line, int column) {
         super(line, column);
@@ -10,6 +12,11 @@ public abstract class ExprNode extends Node {
 
         public LiteralNode(Object value, int line, int column) {
             super(line, column);
+            this.value = value;
+        }
+
+        public LiteralNode(Object value) {
+            super(Integer.MAX_VALUE, Integer.MAX_VALUE);
             this.value = value;
         }
 
@@ -25,6 +32,11 @@ public abstract class ExprNode extends Node {
             this.name = name;
         }
 
+        public VarNode(String name) {
+            super(Integer.MAX_VALUE, Integer.MAX_VALUE);
+            this.name = name;
+        }
+
         @Override
         public void generateCode() {
             System.out.print(name);
@@ -36,8 +48,8 @@ public abstract class ExprNode extends Node {
         public ExprNode right;
         public String operator; // "+", "-", "*", "/", "AND", "OR", "==", "<", etc.
 
-        public BinaryOpNode(ExprNode left, String operator, ExprNode right, int line, int column) {
-            super(line, column);
+        public BinaryOpNode(ExprNode left, String operator, ExprNode right) {
+            super(left.line, left.column);
             this.left = left;
             this.operator = operator;
             this.right = right;

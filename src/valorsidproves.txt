@@ -1,2 +1,6 @@
 principal programa1 :
-    fprincipal
+    funcio enter primera () :
+        enter primera := 4
+        tornar x
+    fifuncio
+fprincipal

@@ -1,5 +1,7 @@
 package symbols;
 
+import java_cup.runtime.Symbol;
+
 import java.util.List;
 
 public abstract class CondNode extends InstrNode {
@@ -41,11 +43,11 @@ public abstract class CondNode extends InstrNode {
         public void generateCode(){}
 
         public static class CaseNode extends InstrNode {
-            public final TermNode value;
+            public final ExprNode value;
             public final List<InstrNode> instrs;
 
-            public CaseNode(TermNode value, List<InstrNode> instrs, int line, int column) {
-                super(line, column);
+            public CaseNode(ExprNode value, List<InstrNode> instrs) {
+                super(instrs.getFirst().line, instrs.getFirst().column);
                 this.value = value;
                 this.instrs = instrs;
             }
