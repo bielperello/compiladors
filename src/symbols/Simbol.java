@@ -2,33 +2,43 @@ package symbols;
 
 import symbols.TypeNode;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Simbol {
-    public static enum Methods {FUNCIO, PROCEDIMENT};
+    public static enum Methods {FUNCIO, PROCEDIMENT, NONE};
 
     private final String name;
+    // tipus de la variable o del retorn de la funció
     private final TypeNode type;
     private final boolean isConst;
     private boolean isInitialized;
-    private final Methods method;
+    private final Methods methodType;
     private final int line;
     private final int column;
+
+    private final List<ArgNode> paramTypes;
 
     public Simbol(String name, TypeNode type, boolean isConst, int line, int column) {
         this.name = name;
         this.type = type;
         this.isConst = isConst;
-        this.method = null;
+        this.methodType = Methods.NONE;
         this.line = line;
         this.column = column;
+        this.paramTypes = null;
     }
 
-    public Simbol(String name, TypeNode type, boolean isConst, Methods method, int line, int column) {
+    // Funcions / Procediments
+    public Simbol(String name, TypeNode type, boolean isConst, Methods method,
+                  int line, int column, List<ArgNode> paramTypes) {
         this.name = name;
         this.type = type;
         this.isConst = isConst;
-        this.method = method;
+        this.methodType = method;
         this.line = line;
         this.column = column;
+        this.paramTypes = paramTypes;
     }
 
     public String getName() {
@@ -55,9 +65,15 @@ public class Simbol {
         return column;
     }
 
+    public List<ArgNode> getParams() {
+        return this.paramTypes;
+    }
+
     public void setInitialized(boolean initialized) {
         this.isInitialized = initialized;
     }
+
+
 
     @Override
     public String toString() {

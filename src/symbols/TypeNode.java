@@ -18,6 +18,10 @@ public class TypeNode extends Node {
         this.tupleFields = tupleFields;
     }
 
+    public Kind getKind() {
+        return this.kind;
+    }
+
     @Override
     public void generateCode() {
         // normalment no genera codi directe

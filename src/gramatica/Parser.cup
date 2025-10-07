@@ -159,38 +159,41 @@ methods ::= method:m methods:ms
 
 method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS decls:d instrs:i TORNAR expr:e ENDFUNCIO
             {:
-                SymbolTable oldScope = currentScope;
-                currentScope = new SymbolTable(oldScope);
+                int lin = line(f);
+                int col = column(f);
 
-                Simbol s = new Simbol(id, t, false, Simbol.Methods.FUNCIO, line(f), column(f));
-
-                MethodNode m = new MethodNode(true, id, t, a, d, i, e, line(f), column(f), currentScope);
+                Simbol s = new Simbol(id, t, false, Simbol.Methods.FUNCIO, lin, col, a);
 
                 if (!currentScope.add(s)) {
-                    ErrorManager.add(new CompilerError(line(f), column(f), CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
                         "Nom ja utilitzat: " + id));
                 }
 
-                currentScope = oldScope;
+                SymbolTable oldScope = currentScope;
+                currentScope = new SymbolTable(oldScope);
 
+                MethodNode m = new MethodNode(true, id, t, a, d, i, e, lin, col, currentScope);
+
+                currentScope = oldScope;
                 RESULT = m;
             :}
         | PROCEDIMENT:p ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS decls:d instrs:i ENDPROCEDIMENT
             {:
-                SymbolTable oldScope = currentScope;
-                currentScope = new SymbolTable(oldScope);
+                int lin = line(p);
+                int col = column(p);
 
-                Simbol s = new Simbol(id, null, false, Simbol.Methods.PROCEDIMENT, line(p), column(p));
-
-                MethodNode m = new MethodNode(true, id, null, a, d, i, null, line(p), column(p), currentScope);
-
+                Simbol s = new Simbol(id, null, false, Simbol.Methods.PROCEDIMENT, lin, col, a);
                 if (!currentScope.add(s)) {
-                    ErrorManager.add(new CompilerError(line(p), column(p), CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
                         "Nom ja utilitzat: " + id));
                 }
 
-                currentScope = oldScope;
+                SymbolTable oldScope = currentScope;
+                currentScope = new SymbolTable(oldScope);
 
+                MethodNode m = new MethodNode(true, id, null, a, d, i, null, lin, col, currentScope);
+
+                currentScope = oldScope;
                 RESULT = m;
             :}
 ;
@@ -233,7 +236,46 @@ instr ::= call:c
 
 call ::= ID:id OBR_PAR args:a TANC_PAR
             {:
-                RESULT = new InstrNode.CallNode(id, a);
+                InstrNode.CallNode c = new InstrNode.CallNode(id, a);
+
+                Simbol s = currentScope.lookUp(id);
+                if (s == null) {
+                    ErrorManager.add(new CompilerError(c.line, c.column, CompilerError.TYPE.SEMANTIC,
+                        "Mètode no declarat: " + id));
+                } else if (s.methodType == Simbol.Methods.NONE) {
+                    ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
+                    id + " no és un mètode."));
+                } else {
+                    List<ArgNode> params = s.getParams();
+                    List<ArgNode> givenArgs = a;
+
+                    if (params == null) params = new ArrayList<>();
+
+                    if(params.size() != givenArgs.size()) {
+                        ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
+                                                    "Nombre d'arguments incorrecte a la crida de " + id +
+                                                    ": s'esperaven " + expectedParams.size() +
+                                                    " i s'han passat " + givenArgs.size()));
+                    } else {
+                        for (int i = 0; i < params.size(); i++) {
+                            TypeNode.Kind esperat = params.get(i).getType().getKind();
+                            TypeNode.Kind = givenArgs.get(i).getType().getKind();
+
+                            if (rebut == null || esperat != rebut) {
+                                ErrorManager.add(new CompilerError(
+                                                    givenArgs.get(i).line,
+                                                    givenArgs.get(i).column,
+                                                    CompilerError.TYPE.SEMANTIC,
+                                                    "Tipus incorrecte a l'argument " + (i + 1) +
+                                                    " de la crida a " + id + ": s'esperava " +
+                                                    esperat + " i s'ha rebut " + rebut));
+                            }
+
+                        }
+                    }
+                }
+
+                RESULT = c;
             :}
 ;
 

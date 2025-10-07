@@ -1,7 +1,5 @@
 package symbols;
 
-import java_cup.runtime.Symbol;
-
 public class ArgNode extends Node{
     public ExprNode.VarNode var;
     public TypeNode type;
@@ -10,6 +8,10 @@ public class ArgNode extends Node{
         super(type.line, type.column);
         this.var = var;
         this.type = type;
+    }
+
+    public TypeNode getType() {
+        return this.type;
     }
 
     @Override

@@ -649,20 +649,22 @@ class CUP$Parser$actions {
 		int eright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		ExprNode e = (ExprNode)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
-                SymbolTable oldScope = currentScope;
-                currentScope = new SymbolTable(oldScope);
+                int lin = line(f);
+                int col = column(f);
 
-                Simbol s = new Simbol(id, t, false, Simbol.Methods.FUNCIO, line(f), column(f));
-
-                MethodNode m = new MethodNode(true, id, t, a, d, i, e, line(f), column(f), currentScope);
+                Simbol s = new Simbol(id, t, false, Simbol.Methods.FUNCIO, lin, col, a);
 
                 if (!currentScope.add(s)) {
-                    ErrorManager.add(new CompilerError(line(f), column(f), CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
                         "Nom ja utilitzat: " + id));
                 }
 
-                currentScope = oldScope;
+                SymbolTable oldScope = currentScope;
+                currentScope = new SymbolTable(oldScope);
 
+                MethodNode m = new MethodNode(true, id, t, a, d, i, e, lin, col, currentScope);
+
+                currentScope = oldScope;
                 RESULT = m;
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("method",13, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-11)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
@@ -689,20 +691,21 @@ class CUP$Parser$actions {
 		int iright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		List<InstrNode> i = (List<InstrNode>)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
-                SymbolTable oldScope = currentScope;
-                currentScope = new SymbolTable(oldScope);
+                int lin = line(p);
+                int col = column(p);
 
-                Simbol s = new Simbol(id, null, false, Simbol.Methods.PROCEDIMENT, line(p), column(p));
-
-                MethodNode m = new MethodNode(true, id, null, a, d, i, null, line(p), column(p), currentScope);
-
+                Simbol s = new Simbol(id, null, false, Simbol.Methods.PROCEDIMENT, lin, col, a);
                 if (!currentScope.add(s)) {
-                    ErrorManager.add(new CompilerError(line(p), column(p), CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
                         "Nom ja utilitzat: " + id));
                 }
 
-                currentScope = oldScope;
+                SymbolTable oldScope = currentScope;
+                currentScope = new SymbolTable(oldScope);
 
+                MethodNode m = new MethodNode(true, id, null, a, d, i, null, lin, col, currentScope);
+
+                currentScope = oldScope;
                 RESULT = m;
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("method",13, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-8)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
@@ -832,7 +835,20 @@ class CUP$Parser$actions {
 		int aright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		List<ArgNode> a = (List<ArgNode>)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
-                RESULT = new InstrNode.CallNode(id, a);
+                InstrNode.CallNode c = new InstrNode.CallNode(id, a);
+
+                Simbol s = currentScope.lookUp(id);
+                if (s == null) {
+                    ErrorManager.add(new CompilerError(c.line, c.column, CompilerError.TYPE.SEMANTIC,
+                        "Mètode no declarat: " + id));
+                } else if (s.methodType == Simbol.Methods.NONE) {
+                    ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
+                    id + " no és un mètode."));
+                } else {
+
+                }
+
+                RESULT = c;
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("call",9, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
