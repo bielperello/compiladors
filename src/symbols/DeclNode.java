@@ -26,6 +26,10 @@ public class DeclNode extends Node {
         this.expr = expr;
     }
 
+    public TypeNode getType() {
+        return type;
+    }
+
     @Override
     public void generateCode() {
         for (ExprNode.VarNode id : ids) {

@@ -6,6 +6,7 @@ public class Main {
         AnaLex lexer = new AnaLex(new FileReader("src/valorsidproves.txt"));
         Parser parser = new Parser(lexer);
         Symbol result = parser.parse();
+        ErrorManager.printErrors();
         System.out.println(result.value);
     }
 }

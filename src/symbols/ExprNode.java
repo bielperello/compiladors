@@ -1,10 +1,18 @@
 package symbols;
 
-import java_cup.runtime.Symbol;
-
 public abstract class ExprNode extends Node {
+    protected TypeNode.Kind kind;
+
     public ExprNode(int line, int column) {
         super(line, column);
+    }
+
+    public TypeNode.Kind getKind() {
+        return kind;
+    }
+
+    public void setKind(TypeNode.Kind type) {
+        this.kind = type;
     }
 
     public static class LiteralNode extends ExprNode {
@@ -13,11 +21,23 @@ public abstract class ExprNode extends Node {
         public LiteralNode(Object value, int line, int column) {
             super(line, column);
             this.value = value;
+            setKind();
         }
 
         public LiteralNode(Object value) {
             super(Integer.MAX_VALUE, Integer.MAX_VALUE);
             this.value = value;
+            setKind();
+        }
+
+        private void setKind() {
+            if (value instanceof Double || value instanceof Integer) {
+                this.kind = TypeNode.Kind.DOUBLE;
+            } else if (value instanceof Boolean) {
+                this.kind = TypeNode.Kind.BOOLEAN;
+            } else if (value instanceof String) {
+                this.kind = TypeNode.Kind.STRING;
+            }
         }
 
         @Override
@@ -35,6 +55,10 @@ public abstract class ExprNode extends Node {
         public VarNode(String name) {
             super(Integer.MAX_VALUE, Integer.MAX_VALUE);
             this.name = name;
+        }
+
+        public String getName() {
+            return name;
         }
 
         @Override

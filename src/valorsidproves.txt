@@ -1,6 +1,6 @@
 principal programa1 :
     funcio enter primera () :
-        enter primera := 4
+        cadena x := "hola"
         tornar x
     fifuncio
 fprincipal

@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Simbol {
-    public static enum Methods {FUNCIO, PROCEDIMENT, NONE};
+    public enum Methods {FUNCIO, PROCEDIMENT, NONE};
 
     private final String name;
     // tipus de la variable o del retorn de la funció
@@ -63,6 +63,10 @@ public class Simbol {
 
     public int getColumn() {
         return column;
+    }
+
+    public Methods getMethodType() {
+        return this.methodType;
     }
 
     public List<ArgNode> getParams() {

@@ -14,6 +14,10 @@ public class ArgNode extends Node{
         return this.type;
     }
 
+    public ExprNode.VarNode getVar() {
+        return this.var;
+    }
+
     @Override
     public void generateCode() {
         System.out.println(type + " " + var.name);
