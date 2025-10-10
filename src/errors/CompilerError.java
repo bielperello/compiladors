@@ -1,3 +1,5 @@
+package errors;
+
 public class CompilerError {
     public enum TYPE { LEXIC, SINTACTIC, SEMANTIC }
 
@@ -9,6 +11,13 @@ public class CompilerError {
     public CompilerError(int line, int column, TYPE type, String message) {
         this.line = line;
         this.column = column;
+        this.type = type;
+        this.message = message;
+    }
+
+    public CompilerError(TYPE type, String message) {
+        this.line = 0;
+        this.column = 0;
         this.type = type;
         this.message = message;
     }

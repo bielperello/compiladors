@@ -52,6 +52,12 @@ public abstract class CondNode extends InstrNode {
                 this.instrs = instrs;
             }
 
+            public CaseNode(ExprNode value, List<InstrNode> instrs, int line, int column) {
+                super(line, column);
+                this.value = value;
+                this.instrs = instrs;
+            }
+
             @Override
             public void generateCode(){}
         }

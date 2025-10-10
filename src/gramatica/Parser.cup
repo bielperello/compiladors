@@ -11,7 +11,7 @@
  */
 import java_cup.runtime.*;
 import symbols.*;
-
+import errors.*;
 import java.util.*;
 
 class Parser;
@@ -35,7 +35,6 @@ parser code {:
         return (s != null && s.right >= 0) ? s.right : 0;
     }
 
-
     public <T> List<T> combinar(T first, List<T> rest) {
         List<T> list = new ArrayList<>();
         list.add(first);
@@ -50,6 +49,7 @@ parser code {:
     }
 
     public static SymbolTable currentScope = new SymbolTable(null);
+    private TypeNode.Kind auxSwitchType;
 
     public boolean isInt(TypeNode.Kind t) {
         return (t == TypeNode.Kind.DOUBLE);
@@ -61,6 +61,19 @@ parser code {:
 
     public boolean isString(TypeNode.Kind t) {
         return (t == TypeNode.Kind.STRING);
+    }
+
+    public void openScope() {
+        currentScope = new SymbolTable(currentScope);
+    }
+
+    public void closeScope() {
+        if(currentScope.getParent() != null) {
+            currentScope = currentScope.getParent();
+        } else {
+            ErrorManager.add(new CompilerError(CompilerError.TYPE.SEMANTIC,
+                "Error intern: intent de tancar l'àmbit global"));
+        }
     }
 :}
 
@@ -177,7 +190,7 @@ methods ::= method:m methods:ms
             :}
 ;
 
-method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS decls:d instrs:i TORNAR expr:e ENDFUNCIO
+method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR
             {:
                 int lin = line(f);
                 int col = column(f);
@@ -189,10 +202,7 @@ method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS decls:d inst
                         "Nom ja utilitzat: " + id));
                 }
 
-                SymbolTable oldScope = currentScope;
-                currentScope = new SymbolTable(oldScope);
-
-                MethodNode m = new MethodNode(true, id, t, a, d, i, e, lin, col, currentScope);
+                openScope();
 
                 for (ArgNode arg : a) {
                     String name = arg.getVar().getName();
@@ -205,10 +215,15 @@ method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS decls:d inst
                     }
                 }
 
-                currentScope = oldScope;
+            :}
+          DOS_PUNTS decls:d instrs:i TORNAR expr:e ENDFUNCIO
+            {:
+                MethodNode m = new MethodNode(true, id, t, a, d, i, e, line(f), column(f), currentScope);
+                closeScope();
+
                 RESULT = m;
             :}
-        | PROCEDIMENT:p ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS decls:d instrs:i ENDPROCEDIMENT
+        | PROCEDIMENT:p ID:id OBR_PAR args:a TANC_PAR
             {:
                 int lin = line(p);
                 int col = column(p);
@@ -219,10 +234,7 @@ method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS decls:d inst
                         "Nom ja utilitzat: " + id));
                 }
 
-                SymbolTable oldScope = currentScope;
-                currentScope = new SymbolTable(oldScope);
-
-                MethodNode m = new MethodNode(true, id, null, a, d, i, null, lin, col, currentScope);
+                openScope();
 
                 for (ArgNode arg : a) {
                     String name = arg.getVar().getName();
@@ -234,13 +246,17 @@ method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS decls:d inst
                                     "Argument ja declarat: " + name));
                     }
                 }
+            :}
+         DOS_PUNTS decls:d instrs:i ENDPROCEDIMENT
+            {:
+                MethodNode m = new MethodNode(true, id, null, a, d, i, null, line(p), column(p), currentScope);
+                closeScope();
 
-                currentScope = oldScope;
                 RESULT = m;
             :}
 ;
 
-instrs ::= instr:i PUNT_COMA instrs:is
+instrs ::= instr:i instrs:is
             {:
                 RESULT = combinar(i, is);
             :}
@@ -293,13 +309,18 @@ instr ::= call:c
                     s.setInitialized(true);
                 }
             :}
+        | decl:d
+            {:
+                RESULT = new InstrNode.InstrDeclNode(d);
+            :}
 ;
 
-call ::= ID:id OBR_PAR args:a TANC_PAR
+call ::= ID:id OBR_PAR:op args:a TANC_PAR
             {:
-                InstrNode.CallNode c = new InstrNode.CallNode(id, a);
-                int lin = c.line;
-                int col = c.column;
+                int lin = line(op);
+                int col = column(op);
+
+                InstrNode.CallNode c = new InstrNode.CallNode(id, a, lin, col);
 
                 Simbol s = currentScope.lookUp(id);
                 if (s == null) {
@@ -342,22 +363,48 @@ call ::= ID:id OBR_PAR args:a TANC_PAR
             :}
 ;
 
-cond ::= OP_IF:op OBR_PAR expr:e TANC_PAR OP_THEN instrs:i optional_cond:o
+cond ::= OP_IF:op OBR_PAR expr:e TANC_PAR
+            {:
+                openScope();
+
+                if (!isBoolean(e.getKind())) {
+                    ErrorManager.add(new CompilerError(line(op), column(op), CompilerError.TYPE.SEMANTIC,
+                        "La condició del 'if' ha de ser de tipus booleà, trobat: " + e.getKind()));
+                }
+            :}
+          OP_THEN instrs:i optional_cond:o
             {:
                 CondNode.IfNode if_node = new CondNode.IfNode(e, i, o, line(op), column(op));
-
-
+                closeScope();
 
                 RESULT = if_node;
             :}
-        | OP_SWITCH:s ID:id DOS_PUNTS cas_opcions:c DEFAULT_SWITCH DOS_PUNTS instrs:i OP_ENDSWITCH
+        | OP_SWITCH:op ID:id DOS_PUNTS
             {:
-                RESULT = new CondNode.SwitchNode(id, c, i, line(s), column(s));
+                Simbol s = currentScope.lookUp(id);
+                if (s == null) {
+                    ErrorManager.add(new CompilerError(line(op), column(op), CompilerError.TYPE.SEMANTIC,
+                        "Variable no declarada al 'switch': " + id));
+                }
+
+                openScope();
+
+                auxSwitchType = (s != null) ? s.getType().getKind() : TypeNode.Kind.NULL;
+            :}
+          cas_opcions:c DEFAULT_SWITCH DOS_PUNTS instrs:i OP_ENDSWITCH
+            {:
+                closeScope();
+                RESULT = new CondNode.SwitchNode(id, c, i, line(op), column(op));
             :}
 ;
 
-optional_cond ::= OP_ELSE instrs:i OP_ENDIF
+optional_cond ::= OP_ELSE
             {:
+                openScope();
+            :}
+          instrs:i OP_ENDIF
+            {:
+                closeScope();
                 RESULT = i;
             :}
         | OP_ENDIF
@@ -376,24 +423,63 @@ cas_opcions ::= cas_opcio:c cas_opcions:cs
             :}
 ;
 
-cas_opcio ::= terme:t DOS_PUNTS instrs:i
+cas_opcio ::= terme:t DOS_PUNTS:d instrs:i
             {:
-                RESULT = new CondNode.SwitchNode.CaseNode(t, i);
+                TypeNode.Kind caseType = t.getKind();
+
+                if (auxSwitchType != TypeNode.Kind.NULL && auxSwitchType != caseType) {
+                    ErrorManager.add(new CompilerError(line(d), column(d), CompilerError.TYPE.SEMANTIC,
+                        "Tipus incompatible al 'case': esperat " + auxSwitchType + " però trobat " + caseType));
+                }
+
+                RESULT = new CondNode.SwitchNode.CaseNode(t, i, line(d), column(d));
             :}
 ;
 
-loop ::= OP_WHILE:w OBR_PAR expr:e TANC_PAR OP_DO instrs:i OP_ENDWHILE
+loop ::= OP_WHILE:w OBR_PAR expr:e TANC_PAR
             {:
+                if (!isBoolean(e.getKind())) {
+                    ErrorManager.add(new CompilerError(
+                        line(w), column(w), CompilerError.TYPE.SEMANTIC,
+                        "La condició del 'while' ha de ser de tipus booleà, trobat: " + e.getKind()
+                    ));
+                }
+
+                openScope();
+            :}
+
+         OP_DO instrs:i OP_ENDWHILE
+            {:
+                closeScope();
+
                 RESULT = new LoopNode.WhileNode(e, i, line(w), column(w));
             :}
-        | OP_DO:d instrs:i OP_REP OBR_PAR expr:e TANC_PAR
+        | OP_DO:d
             {:
+                openScope();
+            :}
+          instrs:i OP_REP OBR_PAR expr:e TANC_PAR
+            {:
+                closeScope();
+
+                if(!isBoolean(e.getKind())) {
+                    ErrorManger.add(line(w), column(w), CompilerError.TYPE.SEMANTIC,
+                        "La condició del 'do-while' ha de ser de tipus booleà, trobat: " + e.getKind());
+                }
+
                 RESULT = new LoopNode.DoWhileNode(i, e, line(d), column(d));
             :}
 ;
 
 entrada ::= INPUT:i OBR_PAR ID:id TANC_PAR
             {:
+                Simbol s = currentScope.lookUp(id);
+
+                if(s == null) {
+                    ErrorManager.add(line(i), column(i), CompilerError.TYPE.SEMANTIC,
+                        "Variable " + id + " no declarada");
+                }
+
                 RESULT = new InstrNode.InputNode(id, line(i), column(i));
             :}
 ;
@@ -424,6 +510,19 @@ tipus ::= OP_TIPUS_ENTER:op
 
 tupla_def ::= OBR_PAR:o tupla_camp_list:tcl TANC_PAR
             {:
+                Set<String> noms = new HashSet<>;
+
+                for(ArgNode a : tcl) {
+                    String name = arg.getVar().getName();
+                    if (!noms.add(name)) {
+                        ErrorManager.add(new CompilerError(
+                            arg.getVar().line, arg.getVar().column,
+                            CompilerError.TYPE.SEMANTIC,
+                            "Camp duplicat dins la tupla: " + name
+                        ));
+                    }
+                }
+
                 RESULT = new TypeNode(tcl, line(o), column(o));
             :}
 ;
@@ -502,15 +601,28 @@ expr ::= expr:e op_arit:op terme:t
                 int lin = bin.line;
                 int col = bin.column;
 
-                // Comprovació de tipus relacional
-                if (!isInt(e.getKind()) || !isInt(t.getKind())) {
-                    ErrorManager.add(new CompilerError(lin, col,
-                        CompilerError.TYPE.SEMANTIC,
-                        "Comparació relacional només permesa entre enters (" + e.getKind() + " " + op + " " + t.getKind() + ")"));
-                    bin.setKind(TypeNode.Kind.BOOLEAN); // valor per defecte
+                TypeNode.Kind t_left = e.getKind();
+                TypeNode.Kind t_right = t.getKind();
+
+                // Comparació relacional
+                if (isInt(t_left) && isInt(t_right)) {
+                    bin.setKind(TypeNode.Kind.BOOLEAN);
+                } else if (isString(t_left) && isString(t_right)) {
+                    // strings només permesos amb == o !=
+                    if (!op.equals("==") && !op.equals("!=")) {
+                        ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
+                            "Comparació relacional només permesa amb '==' o '!=' per a cadenes ("
+                            + e.getKind() + " " + op + " " + t.getKind() + ")"));
+                    }
+                    bin.setKind(TypeNode.Kind.BOOLEAN);
                 } else {
+                    // Qualsevol altra combinació és error
+                    ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
+                        "Comparació relacional només permesa entre enters o cadenes ("
+                        + e.getKind() + " " + op + " " + t.getKind() + ")"));
                     bin.setKind(TypeNode.Kind.BOOLEAN);
                 }
+
 
                 RESULT = bin;
             :}

@@ -1,7 +1,7 @@
 package symbols;
 
 public class TypeNode extends Node {
-    public enum Kind { DOUBLE, STRING, BOOLEAN, TUPLE }
+    public enum Kind { DOUBLE, STRING, BOOLEAN, TUPLE, NULL }
 
     public Kind kind;
     public java.util.List<ArgNode> tupleFields; // només s’usa si kind == TUPLE

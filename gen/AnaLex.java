@@ -18,6 +18,9 @@ import java.io.IOException;
 import java_cup.runtime.*;
 import java_cup.runtime.ComplexSymbolFactory.ComplexSymbol;
 
+import errors.ErrorManager;
+import errors.CompilerError;
+
 @SuppressWarnings("fallthrough")
 public class AnaLex implements java_cup.runtime.Scanner {
 
@@ -907,7 +910,14 @@ public class AnaLex implements java_cup.runtime.Scanner {
       else {
         switch (zzAction < 0 ? zzAction : ZZ_ACTION[zzAction]) {
           case 1:
-            { return symbol(ParserSym.ERROR, yytext());
+            { // Qualsevol caràcter no reconegut arriba aquí
+          ErrorManager.add(new CompilerError(
+              yyline + 1, yycolumn + 1,
+              CompilerError.TYPE.LEXIC,
+              "Símbol desconegut: '" + yytext() + "'"
+          ));
+          // Pots retornar null o ignorar-lo segons la teva estratègia
+          return null;
             }
           // fall through
           case 43: break;
@@ -942,7 +952,7 @@ public class AnaLex implements java_cup.runtime.Scanner {
           // fall through
           case 48: break;
           case 7:
-            { return symbol(ParserSym.ENTER, Double.parseDouble(yytext()));
+            { return symbol(ParserSym.ENTER, Double.parseDouble(this.yytext()));
             }
           // fall through
           case 49: break;
@@ -969,7 +979,7 @@ public class AnaLex implements java_cup.runtime.Scanner {
           // fall through
           case 52: break;
           case 11:
-            { return symbol(ParserSym.ID, yytext());
+            { return symbol(ParserSym.ID, this.yytext());
             }
           // fall through
           case 53: break;
@@ -1026,7 +1036,7 @@ public class AnaLex implements java_cup.runtime.Scanner {
           // fall through
           case 62: break;
           case 21:
-            { return symbol(ParserSym.VALOR_LOGIC, yytext().equals("cert"));
+            { return symbol(ParserSym.VALOR_LOGIC, this.yytext().equals("cert"));
             }
           // fall through
           case 63: break;

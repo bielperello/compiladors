@@ -19,7 +19,7 @@ public class SymbolTable {
 
         symbols.put(symbol.getName(), symbol);
 
-        System.out.println("Symbol " + symbol.getName() + " added");
+        System.out.println("Symbol " + symbol.getName() + " added to " + this);
 
         return true;
     }

@@ -3,4 +3,13 @@ principal programa1 :
         cadena x := "hola"
         tornar x
     fifuncio
+
+    enter p := 45
+
+    cas p:
+        4:
+        cert:
+        6:
+        altre:
+    fcas
 fprincipal

@@ -70,7 +70,7 @@ public abstract class ExprNode extends Node {
     public static class BinaryOpNode extends ExprNode {
         public ExprNode left;
         public ExprNode right;
-        public String operator; // "+", "-", "*", "/", "AND", "OR", "==", "<", etc.
+        public String operator; // "+", "-", "*", "/", "i", "o", "==", "<", etc.
 
         public BinaryOpNode(ExprNode left, String operator, ExprNode right) {
             super(left.line, left.column);

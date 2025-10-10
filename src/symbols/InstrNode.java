@@ -19,8 +19,8 @@ public abstract class InstrNode extends Node {
         public String functionName;
         public List<ArgNode> args;
 
-        public CallNode(String functionName, List<ArgNode> args) {
-            super(args.getFirst().line, args.getFirst().column);
+        public CallNode(String functionName, List<ArgNode> args, int line, int column) {
+            super(line, column);
             this.functionName = functionName;
             this.args = args;
         }
