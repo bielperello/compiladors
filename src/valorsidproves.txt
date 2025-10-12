@@ -4,12 +4,10 @@ principal programa1 :
         tornar x
     fifuncio
 
-    enter p := 45
+    tupla (nom: cadena, edat: enter) Persona
 
-    cas p:
-        4:
-        cert:
-        6:
-        altre:
-    fcas
+    Persona p1
+    Persona p2
+
+
 fprincipal

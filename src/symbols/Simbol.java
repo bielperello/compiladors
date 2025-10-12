@@ -17,7 +17,7 @@ public class Simbol {
     private final int line;
     private final int column;
 
-    private final List<ArgNode> paramTypes;
+    private List<ArgNode> paramTypes;
 
     public Simbol(String name, TypeNode type, boolean isConst, int line, int column) {
         this.name = name;
@@ -77,6 +77,9 @@ public class Simbol {
         this.isInitialized = initialized;
     }
 
+    public void setParamTypes(List<ArgNode> paramTypes) {
+        this.paramTypes = paramTypes;
+    }
 
 
     @Override

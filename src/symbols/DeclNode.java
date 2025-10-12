@@ -1,12 +1,11 @@
 package symbols;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class DeclNode extends Node {
     public boolean isConst;
     public TypeNode type;
-    public List<ExprNode.VarNode> ids = new ArrayList<>();
+    public List<ExprNode.VarNode> ids;
     public ExprNode expr;
 
     public DeclNode(boolean isConst, TypeNode type, List<ExprNode.VarNode> ids, ExprNode expr,

@@ -7,7 +7,7 @@
  * Professor: Pere Palmer
  *
  * Generar:
- * java -jar java-cup-11b.jar -expect 22 -parser Parser -symbols ParserSym -destdir gen src/gramatica/Parser.cup
+ * java -jar java-cup-11b.jar -expect 26 -parser Parser -symbols ParserSym -destdir gen src/gramatica/Parser.cup
  */
 import java_cup.runtime.*;
 import symbols.*;
@@ -63,6 +63,10 @@ parser code {:
         return (t == TypeNode.Kind.STRING);
     }
 
+    public boolean isTuple(TypeNode.Kind t) {
+        return (t == TypeNode.Kind.TUPLE);
+    }
+
     public void openScope() {
         currentScope = new SymbolTable(currentScope);
     }
@@ -90,7 +94,7 @@ terminal Symbol
             EQ, NE, LT, LE, GT, GE, INPUT, OUTPUT,
             AND, OR, NOT, ASSIGNACIO, OBR_PAR,
             TANC_PAR, OBR_CORX, TANC_CORX, DOS_PUNTS,
-            COMA, PUNT_COMA, COMENTARI, ERROR;
+            COMA, PUNT_COMA, PUNT, COMENTARI, ERROR;
 
 terminal String ID, CADENA;
 terminal Double ENTER;
@@ -100,7 +104,7 @@ non terminal ProgramNode program;
 non terminal List<DeclNode> decls;
 non terminal List<MethodNode> methods;
 non terminal List<InstrNode> instrs, optional_cond;
-non terminal DeclNode decl;
+non terminal DeclNode decl, type_def;
 non terminal InstrNode instr,  entrada, sortida;
 non terminal InstrNode.CallNode call;
 non terminal CondNode cond;
@@ -146,9 +150,20 @@ decls ::= decl:d decls:ds
 
 decl ::= tipus:t list_id:l assig:a
             {:
+                boolean esTupla = isTuple(t.getKind());
+                if(esTupla && a != null) {
+                    ErrorManager.add(new CompilerError(t.line, t.column, CompilerError.TYPE.SEMANTIC,
+                            "No es pot assignar una expressió a una tupla"));
+                }
+
                 DeclNode d = new DeclNode(false, t, l, a);
+
                 for(ExprNode.VarNode var : l) {
                     Simbol s = new Simbol(var.name, d.type, d.isConst, var.line, var.column);
+
+                    if (esTupla) {
+                        s.setParamTypes(t.getTupleFields());
+                    }
 
                     if (!currentScope.add(s)) {
                         ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
@@ -176,6 +191,26 @@ decl ::= tipus:t list_id:l assig:a
                             "Constant ja declarada: " + var.name));
                     }
                 }
+                RESULT = d;
+            :}
+        | type_def:d
+            {:
+                RESULT = d;
+            :}
+;
+
+type_def ::= OP_TIPUS_TUPLA:t tupla_def:td ID:id
+            {:
+                DeclNode d = new DeclNode(false, td, crearLlista(new ExprNode.VarNode(id)), null);
+
+                if(currentScope.lookUp(id) != null) {
+                    ErrorManager.add(new CompilerError(line(t), column(t), CompilerError.TYPE.SEMANTIC,
+                        "Nom de tipus ja declarat"));
+                } else {
+                    Simbol s = new Simbol(id, td, false, line(t), column(t));
+                    currentScope.add(s);
+                }
+
                 RESULT = d;
             :}
 ;
@@ -286,28 +321,64 @@ instr ::= call:c
             {:
                 RESULT = s;
             :}
-        | ID:i ASSIGNACIO expr:e
+        | ID:id ASSIGNACIO expr:e
             {:
-                Simbol s = currentScope.lookUp(i);
+                Simbol s = currentScope.lookUp(id);
                 if (s == null) {
                     ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
-                                        "Variable no declarada: " + i));
+                                        "Variable no declarada: " + id));
                 } else {
                     // Comprovar tipus
                     if (!s.getType().getKind().equals(e.getKind())) {
                         ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
-                            "Tipus incompatible a l'assignació: variable " + i +
+                            "Tipus incompatible a l'assignació: variable " + id +
                             " és " + s.getType().getKind() + " i s'hi assigna " + e.getKind()));
                     }
 
                     // Comprovar constant
                     if (s.isConst()) {
                         ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
-                            "No es pot assignar a una constant: " + i));
+                            "No es pot assignar a una constant: " + id));
                     }
 
                     s.setInitialized(true);
+
+                    DeclNode d = new DeclNode(false, s.getType(), crearLlista(new ExprNode.VarNode(id)), e);
+                    RESULT = new InstrNode.InstrDeclNode(d);
                 }
+            :}
+        | ID:id PUNT:p ID:camp ASSIGNACIO expr:e
+            {:
+                Simbol s = currentScope.lookUp(id);
+                ArgNode trobat = null;
+
+                if (s == null) {
+                    ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
+                        "Variable no declarada: " + id));
+                } else if (!isTuple(s.getType().getKind())) {
+                    ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
+                        "La variable '" + id + "' no és de tipus " + TypeNode.Kind.TUPLE));
+                } else {
+                    for (ArgNode a : s.getType().getTupleFields()) {
+                        if (a.getVar().getName().equals(camp)) {
+                            trobat = a;
+                            break;
+                        }
+                    }
+
+                    if (trobat == null) {
+                        ErrorManager.add(new CompilerError(line(p), column(p), CompilerError.TYPE.SEMANTIC,
+                            "El camp '" + camp + "' no existeix a la tupla '" + id + "'"));
+                    } else if (!trobat.getType().getKind().equals(e.getKind())) {
+                        ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
+                            "Tipus incompatible a l'assignació: " + id + "." + camp +
+                            " és " + trobat.getType().getKind() + " i s'hi assigna " + e.getKind()));
+                    }
+                }
+
+                DeclNode d = new DeclNode(false,  trobat.getType() , crearLlista(trobat.getVar()), e);
+
+                RESULT = new InstrNode.InstrDeclNode(d);
             :}
         | decl:d
             {:
@@ -447,8 +518,7 @@ loop ::= OP_WHILE:w OBR_PAR expr:e TANC_PAR
 
                 openScope();
             :}
-
-         OP_DO instrs:i OP_ENDWHILE
+          OP_DO instrs:i OP_ENDWHILE
             {:
                 closeScope();
 
@@ -463,8 +533,8 @@ loop ::= OP_WHILE:w OBR_PAR expr:e TANC_PAR
                 closeScope();
 
                 if(!isBoolean(e.getKind())) {
-                    ErrorManger.add(line(w), column(w), CompilerError.TYPE.SEMANTIC,
-                        "La condició del 'do-while' ha de ser de tipus booleà, trobat: " + e.getKind());
+                    ErrorManager.add(new CompilerError(line(d), column(d), CompilerError.TYPE.SEMANTIC,
+                        "La condició del 'do-while' ha de ser de tipus booleà, trobat: " + e.getKind()));
                 }
 
                 RESULT = new LoopNode.DoWhileNode(i, e, line(d), column(d));
@@ -476,8 +546,8 @@ entrada ::= INPUT:i OBR_PAR ID:id TANC_PAR
                 Simbol s = currentScope.lookUp(id);
 
                 if(s == null) {
-                    ErrorManager.add(line(i), column(i), CompilerError.TYPE.SEMANTIC,
-                        "Variable " + id + " no declarada");
+                    ErrorManager.add(new CompilerError(line(i), column(i), CompilerError.TYPE.SEMANTIC,
+                        "Variable " + id + " no declarada"));
                 }
 
                 RESULT = new InstrNode.InputNode(id, line(i), column(i));
@@ -502,21 +572,28 @@ tipus ::= OP_TIPUS_ENTER:op
             {:
                 RESULT = new TypeNode(TypeNode.Kind.BOOLEAN, line(op), column(op));
             :}
-        | OP_TIPUS_TUPLA tupla_def:td
+        | ID:id
             {:
-                RESULT = td;
+                Simbol s = currentScope.lookUp(id);
+
+                if(s == null || !isTuple(s.getType().getKind())) {
+                    ErrorManager.add(new CompilerError(0, 0, CompilerError.TYPE.SEMANTIC,
+                        "El tipus '" + id + "' no està declarat o no és una tupla"));
+                }
+
+                RESULT = s.getType();
             :}
 ;
 
 tupla_def ::= OBR_PAR:o tupla_camp_list:tcl TANC_PAR
             {:
-                Set<String> noms = new HashSet<>;
+                Set<String> noms = new HashSet<>();
 
                 for(ArgNode a : tcl) {
-                    String name = arg.getVar().getName();
+                    String name = a.getVar().getName();
                     if (!noms.add(name)) {
                         ErrorManager.add(new CompilerError(
-                            arg.getVar().line, arg.getVar().column,
+                            a.getVar().line, a.getVar().column,
                             CompilerError.TYPE.SEMANTIC,
                             "Camp duplicat dins la tupla: " + name
                         ));

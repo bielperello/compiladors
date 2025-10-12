@@ -22,6 +22,10 @@ public class TypeNode extends Node {
         return this.kind;
     }
 
+    public java.util.List<ArgNode> getTupleFields() {
+        return this.tupleFields;
+    }
+
     @Override
     public void generateCode() {
         // normalment no genera codi directe

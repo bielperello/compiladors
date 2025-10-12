@@ -96,6 +96,7 @@ comentari = ##.*
 "]"                  { return symbol(ParserSym.TANC_CORX); }
 ","                  { return symbol(ParserSym.COMA);}
 ";"                  { return symbol(ParserSym.PUNT_COMA); }
+"."                  { return symbol(ParserSym.PUNT); }
 
 
 {op_aritmetic}       {
