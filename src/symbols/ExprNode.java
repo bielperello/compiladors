@@ -1,5 +1,7 @@
 package symbols;
 
+import java.util.List;
+
 public abstract class ExprNode extends Node {
     protected TypeNode.Kind kind;
 
@@ -37,6 +39,8 @@ public abstract class ExprNode extends Node {
                 this.kind = TypeNode.Kind.BOOLEAN;
             } else if (value instanceof String) {
                 this.kind = TypeNode.Kind.STRING;
+            } else if (value instanceof List) {
+                this.kind = TypeNode.Kind.TUPLE;
             }
         }
 
@@ -44,21 +48,42 @@ public abstract class ExprNode extends Node {
         public void generateCode(){};
     }
 
-    public static class VarNode extends ExprNode {
-        public String name;
+    public static class TupleNode extends ExprNode {
+        private List<ExprNode> elements;
 
-        public VarNode(String name, int line, int column) {
+        public TupleNode(List<ExprNode> list, int line, int column) {
+            super(line, column);
+            this.elements = list;
+        }
+
+        public List<ExprNode> getElements() {
+            return elements;
+        }
+
+        @Override
+        public void generateCode(){}
+    }
+
+    public static class VarNode extends ExprNode {
+        private String name;
+        private ExprNode index;
+
+        public VarNode(String name, ExprNode index, int line, int column) {
             super(line, column);
             this.name = name;
+            this.index = index;
         }
 
         public VarNode(String name) {
             super(Integer.MAX_VALUE, Integer.MAX_VALUE);
             this.name = name;
+            this.index = null;
         }
 
+        public void setIndex(ExprNode i) { this.index = i; }
+        public ExprNode getIndex() { return this.index; }
         public String getName() {
-            return name;
+            return this.name;
         }
 
         @Override

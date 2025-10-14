@@ -7,7 +7,7 @@
  * Professor: Pere Palmer
  *
  * Generar:
- * java -jar java-cup-11b.jar -expect 26 -parser Parser -symbols ParserSym -destdir gen src/gramatica/Parser.cup
+ * java -jar java-cup-11b.jar -expect 23 -parser Parser -symbols ParserSym -destdir gen src/gramatica/Parser.cup
  */
 import java_cup.runtime.*;
 import symbols.*;
@@ -94,7 +94,7 @@ terminal Symbol
             EQ, NE, LT, LE, GT, GE, INPUT, OUTPUT,
             AND, OR, NOT, ASSIGNACIO, OBR_PAR,
             TANC_PAR, OBR_CORX, TANC_CORX, DOS_PUNTS,
-            COMA, PUNT_COMA, PUNT, COMENTARI, ERROR;
+            COMA, PUNT_COMA, PUNT, ERROR;
 
 terminal String ID, CADENA;
 terminal Double ENTER;
@@ -104,20 +104,21 @@ non terminal ProgramNode program;
 non terminal List<DeclNode> decls;
 non terminal List<MethodNode> methods;
 non terminal List<InstrNode> instrs, optional_cond;
-non terminal DeclNode decl, type_def;
+non terminal DeclNode decl;
 non terminal InstrNode instr,  entrada, sortida;
 non terminal InstrNode.CallNode call;
 non terminal CondNode cond;
 non terminal CondNode.SwitchNode.CaseNode cas_opcio;
 non terminal LoopNode loop;
 non terminal MethodNode method;
-non terminal TypeNode tipus, tupla_def;
-non terminal ExprNode assig, expr, terme;
+non terminal TypeNode tipus;
+non terminal ExprNode assig, expr, terme, index_opt;
 non terminal ArgNode arg;
-non terminal List<ArgNode> args, tupla_camp_list;
+non terminal List<ArgNode> args;
 non terminal List<CondNode.SwitchNode.CaseNode> cas_opcions;
 non terminal String op_arit, op_rel, op_log;
 non terminal List<ExprNode.VarNode> list_id;
+non terminal List<ExprNode> expr_list;
 
 // Associativitat i precedència dels operadors
 precedence left OR;            // OR més baix que AND
@@ -150,30 +151,25 @@ decls ::= decl:d decls:ds
 
 decl ::= tipus:t list_id:l assig:a
             {:
-                boolean esTupla = isTuple(t.getKind());
-                if(esTupla && a != null) {
-                    ErrorManager.add(new CompilerError(t.line, t.column, CompilerError.TYPE.SEMANTIC,
-                            "No es pot assignar una expressió a una tupla"));
-                }
-
                 DeclNode d = new DeclNode(false, t, l, a);
 
                 for(ExprNode.VarNode var : l) {
-                    Simbol s = new Simbol(var.name, d.type, d.isConst, var.line, var.column);
-
-                    if (esTupla) {
-                        s.setParamTypes(t.getTupleFields());
-                    }
+                    Simbol s = new Simbol(var.getName(), d.type, d.isConst, var.line, var.column);
 
                     if (!currentScope.add(s)) {
                         ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
-                            "Variable ja declarada: " + var.name));
+                            "Variable ja declarada: " + var.getName()));
+                    }
+
+                    if(isTuple(t.getKind()) && a == null) {
+                        ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
+                            "Les tuples s'han d'inicialitzar en el moment de la declaració " + var.getName()));
                     }
 
                     // Comprovació de tipus si hi ha assignació
                     if (a != null && !d.type.getKind().equals(a.getKind())) {
                         ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
-                            "Tipus incompatible a l'assignació: variable " + var.name +
+                            "Tipus incompatible a l'assignació: variable " + var.getName() +
                             " és " + d.getType().getKind() + " i s'hi assigna " + a.getKind()));
                     }
 
@@ -183,34 +179,15 @@ decl ::= tipus:t list_id:l assig:a
         | CONST:c tipus:t list_id:l ASSIGNACIO expr:e
             {:
                 DeclNode d = new DeclNode(true, t, l, e, line(c), column(c));
+
                 for(ExprNode.VarNode var : l) {
-                    Simbol s = new Simbol(var.name, d.type, d.isConst, var.line, var.column);
+                    Simbol s = new Simbol(var.getName(), d.type, d.isConst, var.line, var.column);
 
                     if (!currentScope.add(s)) {
                         ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
-                            "Constant ja declarada: " + var.name));
+                            "Constant ja declarada: " + var.getName()));
                     }
                 }
-                RESULT = d;
-            :}
-        | type_def:d
-            {:
-                RESULT = d;
-            :}
-;
-
-type_def ::= OP_TIPUS_TUPLA:t tupla_def:td ID:id
-            {:
-                DeclNode d = new DeclNode(false, td, crearLlista(new ExprNode.VarNode(id)), null);
-
-                if(currentScope.lookUp(id) != null) {
-                    ErrorManager.add(new CompilerError(line(t), column(t), CompilerError.TYPE.SEMANTIC,
-                        "Nom de tipus ja declarat"));
-                } else {
-                    Simbol s = new Simbol(id, td, false, line(t), column(t));
-                    currentScope.add(s);
-                }
-
                 RESULT = d;
             :}
 ;
@@ -346,39 +323,6 @@ instr ::= call:c
                     DeclNode d = new DeclNode(false, s.getType(), crearLlista(new ExprNode.VarNode(id)), e);
                     RESULT = new InstrNode.InstrDeclNode(d);
                 }
-            :}
-        | ID:id PUNT:p ID:camp ASSIGNACIO expr:e
-            {:
-                Simbol s = currentScope.lookUp(id);
-                ArgNode trobat = null;
-
-                if (s == null) {
-                    ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
-                        "Variable no declarada: " + id));
-                } else if (!isTuple(s.getType().getKind())) {
-                    ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
-                        "La variable '" + id + "' no és de tipus " + TypeNode.Kind.TUPLE));
-                } else {
-                    for (ArgNode a : s.getType().getTupleFields()) {
-                        if (a.getVar().getName().equals(camp)) {
-                            trobat = a;
-                            break;
-                        }
-                    }
-
-                    if (trobat == null) {
-                        ErrorManager.add(new CompilerError(line(p), column(p), CompilerError.TYPE.SEMANTIC,
-                            "El camp '" + camp + "' no existeix a la tupla '" + id + "'"));
-                    } else if (!trobat.getType().getKind().equals(e.getKind())) {
-                        ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
-                            "Tipus incompatible a l'assignació: " + id + "." + camp +
-                            " és " + trobat.getType().getKind() + " i s'hi assigna " + e.getKind()));
-                    }
-                }
-
-                DeclNode d = new DeclNode(false,  trobat.getType() , crearLlista(trobat.getVar()), e);
-
-                RESULT = new InstrNode.InstrDeclNode(d);
             :}
         | decl:d
             {:
@@ -572,45 +516,9 @@ tipus ::= OP_TIPUS_ENTER:op
             {:
                 RESULT = new TypeNode(TypeNode.Kind.BOOLEAN, line(op), column(op));
             :}
-        | ID:id
+        | OP_TIPUS_TUPLA:op
             {:
-                Simbol s = currentScope.lookUp(id);
-
-                if(s == null || !isTuple(s.getType().getKind())) {
-                    ErrorManager.add(new CompilerError(0, 0, CompilerError.TYPE.SEMANTIC,
-                        "El tipus '" + id + "' no està declarat o no és una tupla"));
-                }
-
-                RESULT = s.getType();
-            :}
-;
-
-tupla_def ::= OBR_PAR:o tupla_camp_list:tcl TANC_PAR
-            {:
-                Set<String> noms = new HashSet<>();
-
-                for(ArgNode a : tcl) {
-                    String name = a.getVar().getName();
-                    if (!noms.add(name)) {
-                        ErrorManager.add(new CompilerError(
-                            a.getVar().line, a.getVar().column,
-                            CompilerError.TYPE.SEMANTIC,
-                            "Camp duplicat dins la tupla: " + name
-                        ));
-                    }
-                }
-
-                RESULT = new TypeNode(tcl, line(o), column(o));
-            :}
-;
-
-tupla_camp_list ::= arg:a COMA tupla_camp_list:tcl
-            {:
-                RESULT = combinar(a, tcl);
-            :}
-        | arg:a
-            {:
-                RESULT = crearLlista(a);
+                RESULT = new TypeNode(TypeNode.Kind.TUPLE, line(op), column(op));
             :}
 ;
 
@@ -725,6 +633,10 @@ expr ::= expr:e op_arit:op terme:t
             {:
                 RESULT = e;
             :}
+        | OBR_PAR:o expr_list:e TANC_PAR
+            {:
+                RESULT = new ExprNode.TupleNode(e, line(o), column(o));
+            :}
         | NOT:n expr:e
             {:
                 ExprNode.UnaryOpNode un = new ExprNode.UnaryOpNode("NOT", e, line(n), column(n));
@@ -745,6 +657,16 @@ expr ::= expr:e op_arit:op terme:t
             :}
 ;
 
+expr_list ::= expr:e COMA expr_list:el
+            {:
+                RESULT = combinar(e, el);
+            :}
+        | expr:e
+            {:
+                RESULT = crearLlista(e);
+            :}
+;
+
 terme ::= VALOR_LOGIC:vl
             {:
                 RESULT = new ExprNode.LiteralNode(vl);
@@ -753,15 +675,21 @@ terme ::= VALOR_LOGIC:vl
             {:
                 RESULT = new ExprNode.LiteralNode(e);
             :}
-        | ID:i
+        | ID:id index_opt:i
             {:
-                ExprNode.VarNode var = new ExprNode.VarNode(i);
-                Simbol s = currentScope.lookUp(i);
+                ExprNode.VarNode var = new ExprNode.VarNode(id);
+                Simbol s = currentScope.lookUp(id);
+
                 if (s == null) {
                     ErrorManager.add(new CompilerError(0, 0, CompilerError.TYPE.SEMANTIC,
-                                    "Variable no declarada: " + i));
+                                    "Variable no declarada: " + id));
+                } else if (!isTuple(s.getType().getKind()) && i != null) {
+                    ErrorManager.add(new CompilerError(0, 0, CompilerError.TYPE.SEMANTIC,
+                                    "La variable no és de tipus " + TypeNode.Kind.TUPLE + ", tipus trobat: " +
+                                    s.getType().getKind()));
                 } else {
                     var.setKind(s.getType().getKind());
+                    var.setIndex(i);
                 }
 
                 RESULT = var;
@@ -785,6 +713,17 @@ terme ::= VALOR_LOGIC:vl
                 }
 
                 RESULT = expr;
+            :}
+;
+
+index_opt ::= OBR_CORX:o expr:e TANC_CORX
+            {:
+                if(!isInt(e.getKind())) {
+                    ErrorManager.add(new CompilerError(line(o), column(o), CompilerError.TYPE.SEMANTIC,
+                        "L'índex ha de ser de tipus enter, tipus trobat: " + e.getKind()));
+                }
+
+                RESULT = e;
             :}
 ;
 

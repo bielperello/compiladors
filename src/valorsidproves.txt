@@ -3,11 +3,4 @@ principal programa1 :
         cadena x := "hola"
         tornar x
     fifuncio
-
-    tupla (nom: cadena, edat: enter) Persona
-
-    Persona p1
-    Persona p2
-
-
 fprincipal
