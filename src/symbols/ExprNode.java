@@ -18,7 +18,7 @@ public abstract class ExprNode extends Node {
     }
 
     public static class LiteralNode extends ExprNode {
-        public Object value;
+        private Object value;
 
         public LiteralNode(Object value, int line, int column) {
             super(line, column);
@@ -39,21 +39,26 @@ public abstract class ExprNode extends Node {
                 this.kind = TypeNode.Kind.BOOLEAN;
             } else if (value instanceof String) {
                 this.kind = TypeNode.Kind.STRING;
+            } else if (value instanceof Character) {
+                this.kind = TypeNode.Kind.CHARACTER;
             } else if (value instanceof List) {
                 this.kind = TypeNode.Kind.TUPLE;
             }
         }
+
+        public Object getValue() { return this.value; }
 
         @Override
         public void generateCode(){};
     }
 
     public static class TupleNode extends ExprNode {
-        private List<ExprNode> elements;
+        private final List<ExprNode> elements;
 
         public TupleNode(List<ExprNode> list, int line, int column) {
             super(line, column);
             this.elements = list;
+            setKind(TypeNode.Kind.TUPLE);
         }
 
         public List<ExprNode> getElements() {
@@ -66,22 +71,22 @@ public abstract class ExprNode extends Node {
 
     public static class VarNode extends ExprNode {
         private String name;
-        private ExprNode index;
+        private int index;
 
-        public VarNode(String name, ExprNode index, int line, int column) {
+        public VarNode(String name, Double index, int line, int column) {
             super(line, column);
             this.name = name;
-            this.index = index;
+            this.index = index.intValue();
         }
 
         public VarNode(String name) {
             super(Integer.MAX_VALUE, Integer.MAX_VALUE);
             this.name = name;
-            this.index = null;
+            this.index = Integer.MIN_VALUE;
         }
 
-        public void setIndex(ExprNode i) { this.index = i; }
-        public ExprNode getIndex() { return this.index; }
+        public void setIndex(Double i) { this.index = i.intValue(); }
+        public int getIndex() { return this.index; }
         public String getName() {
             return this.name;
         }

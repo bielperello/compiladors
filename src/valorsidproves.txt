@@ -1,6 +1,18 @@
 principal programa1 :
-    funcio enter primera () :
+    funcio cadena primera () :
         cadena x := "hola"
         tornar x
     fifuncio
+
+    procediment proc1():
+        mentre ( y != 4 ) fer
+            enter x := 2
+            x := x + 2
+        fmentre
+    fiprocediment
+
+    tupla f := (4, "Hola", 'b')
+    caracter y := 'c'
+    enter x := y
+
 fprincipal

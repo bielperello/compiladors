@@ -39,6 +39,7 @@ op_logic        = (no|i|o)
 valor_logic     = (cert|fals)
 nombre          = [0-9]+(\.[0-9]+)?([Ee][+-]?[0-9]+)?
 cadena          =  \"[^\"]*\"
+caracter        = \'([^\'\\]|\\.)\'
 
 comentari = ##.*
 
@@ -149,6 +150,7 @@ comentari = ##.*
 "fifuncio"           { return symbol(ParserSym.ENDFUNCIO); }
 "tornar"             { return symbol(ParserSym.TORNAR); }
 "cadena"             { return symbol(ParserSym.OP_TIPUS_CADENA); }
+"caracter"           { return symbol(ParserSym.OP_TIPUS_CARACTER); }
 "tupla"              { return symbol(ParserSym.OP_TIPUS_TUPLA); }
 "enter"              { return symbol(ParserSym.OP_TIPUS_ENTER); }
 "logic"              { return symbol(ParserSym.OP_TIPUS_LOGIC); }
@@ -162,6 +164,30 @@ comentari = ##.*
                        // lleva les cometes
                        lexema = lexema.substring(1, lexema.length()-1);
                        return symbol(ParserSym.CADENA, lexema);
+                     }
+{caracter}           { String lexema = yytext();
+
+                        lexema = lexema.substring(1, lexema.length() - 1);
+                        char car;
+
+                        if(lexema.length() == 1) {
+                            car = lexema.charAt(0);
+                        } else if (lexema.startsWith("\\")) {
+                            // Seqüència escapada, com '\n', '\t', '\''
+                            switch (lexema.charAt(1)) {
+                                case 'n': car = '\n'; break;
+                                case 't': car = '\t'; break;
+                                case 'r': car = '\r'; break;
+                                case '\'': car = '\''; break;
+                                case '\\': car = '\\'; break;
+                                default:
+                                    throw new Error("Escape no reconegut: " + lexema);
+                            }
+                        } else {
+                            throw new Error("Caràcter invàlid: " + lexema);
+                        }
+
+                        return symbol(ParserSym.CARACTER, car);
                      }
 {valor_logic}        { return symbol(ParserSym.VALOR_LOGIC, this.yytext().equals("cert"));}
 {id}                 { return symbol(ParserSym.ID, this.yytext()); }

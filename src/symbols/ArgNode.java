@@ -20,6 +20,6 @@ public class ArgNode extends Node{
 
     @Override
     public void generateCode() {
-        System.out.println(type + " " + var.name);
+        System.out.println(type + " " + var.getName());
     }
 }

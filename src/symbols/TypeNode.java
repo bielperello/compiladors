@@ -1,7 +1,7 @@
 package symbols;
 
 public class TypeNode extends Node {
-    public enum Kind { DOUBLE, STRING, BOOLEAN, TUPLE, NULL }
+    public enum Kind { DOUBLE, STRING, CHARACTER, BOOLEAN, TUPLE, NULL }
 
     public Kind kind;
 

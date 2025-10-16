@@ -7,7 +7,7 @@
  * Professor: Pere Palmer
  *
  * Generar:
- * java -jar java-cup-11b.jar -expect 23 -parser Parser -symbols ParserSym -destdir gen src/gramatica/Parser.cup
+ * java -jar java-cup-11b.jar -expect 27 -parser Parser -symbols ParserSym -destdir gen src/gramatica/Parser.cup
  */
 import java_cup.runtime.*;
 import symbols.*;
@@ -88,7 +88,7 @@ terminal Symbol
             OP_WHILE, OP_DO, OP_ENDWHILE,
             OP_REP, PROCEDIMENT, ENDPROCEDIMENT,
             FUNCIO, ENDFUNCIO, TORNAR, CONST,
-            OP_TIPUS_CADENA, OP_TIPUS_TUPLA,
+            OP_TIPUS_CADENA, OP_TIPUS_TUPLA, OP_TIPUS_CARACTER,
             OP_TIPUS_ENTER, OP_TIPUS_LOGIC,
             PLUS, MINUS, TIMES, DIVIDE,
             EQ, NE, LT, LE, GT, GE, INPUT, OUTPUT,
@@ -97,6 +97,7 @@ terminal Symbol
             COMA, PUNT_COMA, PUNT, ERROR;
 
 terminal String ID, CADENA;
+terminal Character CARACTER;
 terminal Double ENTER;
 terminal Boolean VALOR_LOGIC;
 
@@ -112,7 +113,8 @@ non terminal CondNode.SwitchNode.CaseNode cas_opcio;
 non terminal LoopNode loop;
 non terminal MethodNode method;
 non terminal TypeNode tipus;
-non terminal ExprNode assig, expr, terme, index_opt;
+non terminal ExprNode assig, expr, terme;
+non terminal ExprNode.LiteralNode index_opt;
 non terminal ArgNode arg;
 non terminal List<ArgNode> args;
 non terminal List<CondNode.SwitchNode.CaseNode> cas_opcions;
@@ -156,23 +158,46 @@ decl ::= tipus:t list_id:l assig:a
                 for(ExprNode.VarNode var : l) {
                     Simbol s = new Simbol(var.getName(), d.type, d.isConst, var.line, var.column);
 
-                    if (!currentScope.add(s)) {
-                        ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
-                            "Variable ja declarada: " + var.getName()));
-                    }
-
-                    if(isTuple(t.getKind()) && a == null) {
-                        ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
-                            "Les tuples s'han d'inicialitzar en el moment de la declaració " + var.getName()));
+                    if(isTuple(t.getKind())) {
+                        if (a == null) {
+                            ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
+                                    "Les tuples s'han d'inicialitzar en el moment de la declaració " + var.getName()));
+                        } else if (a instanceof ExprNode.TupleNode tupleNode) {
+                            s.setTupleCamps(tupleNode.getElements());
+                        }
                     }
 
                     // Comprovació de tipus si hi ha assignació
                     if (a != null && !d.type.getKind().equals(a.getKind())) {
-                        ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
-                            "Tipus incompatible a l'assignació: variable " + var.getName() +
-                            " és " + d.getType().getKind() + " i s'hi assigna " + a.getKind()));
+                        if (isTuple(a.getKind()) && a instanceof ExprNode.VarNode varNode && varNode.getIndex() != Integer.MIN_VALUE) {
+                            Simbol tupla = currentScope.lookUp(varNode.getName());
+
+                            if (tupla != null) {
+                                List<ExprNode> llista = tupla.getTupleCamps();
+                                int index = varNode.getIndex();
+                                if (index >= 0 && index < llista.size()) {
+                                    TypeNode.Kind tipusElement = llista.get(index).getKind();
+                                    if (!t.getKind().equals(tipusElement)) {
+                                        ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
+                                            "Tipus incompatible a l'assignació: variable " + var.getName() +
+                                            " és " + t.getKind() + " i s'hi assigna " + tipusElement));
+                                    }
+                                } else {
+                                    ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
+                                        "L'índex està defora del rang definit per la tupla: [0," + (llista.size() - 1) + "]"));
+                                }
+                            }
+                        } else {
+                            ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
+                                        "Tipus incompatible a l'assignació: variable " + var.getName() + " és " +
+                                        t.getKind() + "i s'hi assigna " + a.getKind()));
+                        }
                     }
 
+                    if (!currentScope.add(s)) {
+                        ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
+                            "Variable ja declarada: " + var.getName()));
+                    }
                 }
                 RESULT = d;
             :}
@@ -226,10 +251,15 @@ method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR
                                     "Argument ja declarat: " + name));
                     }
                 }
-
             :}
-          DOS_PUNTS decls:d instrs:i TORNAR expr:e ENDFUNCIO
+          DOS_PUNTS:dp decls:d instrs:i TORNAR expr:e ENDFUNCIO
             {:
+                if(!e.getKind().equals(t.getKind())) {
+                    ErrorManager.add(new CompilerError(line(dp), column(dp), CompilerError.TYPE.SEMANTIC,
+                                    "El tipus del retorn " + e.getKind() +
+                                    " no coincideix amb el tipus de la funció: " + t.getKind()));
+                }
+
                 MethodNode m = new MethodNode(true, id, t, a, d, i, e, line(f), column(f), currentScope);
                 closeScope();
 
@@ -512,6 +542,10 @@ tipus ::= OP_TIPUS_ENTER:op
             {:
                 RESULT = new TypeNode(TypeNode.Kind.STRING, line(op), column(op));
             :}
+        | OP_TIPUS_CARACTER:op
+            {:
+                RESULT = new TypeNode(TypeNode.Kind.CHARACTER, line(op), column(op));
+            :}
         | OP_TIPUS_LOGIC:op
             {:
                 RESULT = new TypeNode(TypeNode.Kind.BOOLEAN, line(op), column(op));
@@ -589,25 +623,21 @@ expr ::= expr:e op_arit:op terme:t
                 TypeNode.Kind t_left = e.getKind();
                 TypeNode.Kind t_right = t.getKind();
 
-                // Comparació relacional
-                if (isInt(t_left) && isInt(t_right)) {
-                    bin.setKind(TypeNode.Kind.BOOLEAN);
-                } else if (isString(t_left) && isString(t_right)) {
-                    // strings només permesos amb == o !=
-                    if (!op.equals("==") && !op.equals("!=")) {
-                        ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
-                            "Comparació relacional només permesa amb '==' o '!=' per a cadenes ("
-                            + e.getKind() + " " + op + " " + t.getKind() + ")"));
-                    }
+                if (op.equals("==") || op.equals("!=")) {
+                    // == i != per tots els literals
                     bin.setKind(TypeNode.Kind.BOOLEAN);
                 } else {
-                    // Qualsevol altra combinació és error
-                    ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
-                        "Comparació relacional només permesa entre enters o cadenes ("
-                        + e.getKind() + " " + op + " " + t.getKind() + ")"));
-                    bin.setKind(TypeNode.Kind.BOOLEAN);
+                    // <, <=, >, >= només amb enters
+                    if (isInt(t_left) && isInt(t_right)) {
+                        bin.setKind(TypeNode.Kind.BOOLEAN);
+                    } else {
+                        // Qualsevol altre tipus amb aquests operadors és error
+                        ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
+                            "Operador relacional '" + op + "' només permès amb enters (" +
+                            e.getKind() + " " + op + " " + t.getKind() + ")"));
+                        bin.setKind(TypeNode.Kind.BOOLEAN); // permetre continuar parsing
+                    }
                 }
-
 
                 RESULT = bin;
             :}
@@ -689,12 +719,16 @@ terme ::= VALOR_LOGIC:vl
                                     s.getType().getKind()));
                 } else {
                     var.setKind(s.getType().getKind());
-                    var.setIndex(i);
+                    if (i != null) var.setIndex((Double)i.getValue());
                 }
 
                 RESULT = var;
             :}
         | CADENA:c
+            {:
+                RESULT = new ExprNode.LiteralNode(c);
+            :}
+        | CARACTER:c
             {:
                 RESULT = new ExprNode.LiteralNode(c);
             :}
@@ -716,14 +750,13 @@ terme ::= VALOR_LOGIC:vl
             :}
 ;
 
-index_opt ::= OBR_CORX:o expr:e TANC_CORX
+index_opt ::= OBR_CORX:o ENTER:e TANC_CORX
             {:
-                if(!isInt(e.getKind())) {
-                    ErrorManager.add(new CompilerError(line(o), column(o), CompilerError.TYPE.SEMANTIC,
-                        "L'índex ha de ser de tipus enter, tipus trobat: " + e.getKind()));
-                }
-
-                RESULT = e;
+                RESULT = new ExprNode.LiteralNode(e, line(o), column(o));
+            :}
+        | /* buit */
+            {:
+                RESULT = null;
             :}
 ;
 

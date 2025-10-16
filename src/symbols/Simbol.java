@@ -17,6 +17,7 @@ public class Simbol {
     private final int line;
     private final int column;
 
+    private List<ExprNode> tupleCamps;
     private List<ArgNode> paramTypes;
 
     public Simbol(String name, TypeNode type, boolean isConst, int line, int column) {
@@ -73,6 +74,8 @@ public class Simbol {
         return this.paramTypes;
     }
 
+    public List<ExprNode> getTupleCamps() { return this.tupleCamps; }
+
     public void setInitialized(boolean initialized) {
         this.isInitialized = initialized;
     }
@@ -80,6 +83,8 @@ public class Simbol {
     public void setParamTypes(List<ArgNode> paramTypes) {
         this.paramTypes = paramTypes;
     }
+
+    public void setTupleCamps(List<ExprNode> tupleCamps) { this.tupleCamps = tupleCamps; }
 
 
     @Override

@@ -6,60 +6,62 @@
 /** CUP generated class containing symbol constants. */
 public class ParserSym {
   /* terminals */
-  public static final int ENTER = 52;
-  public static final int DIVIDE = 28;
+  public static final int ENTER = 54;
+  public static final int DIVIDE = 29;
   public static final int OP_REP = 14;
   public static final int OP_ENDWHILE = 13;
-  public static final int DOS_PUNTS = 45;
+  public static final int DOS_PUNTS = 46;
   public static final int ENDPROCEDIMENT = 16;
-  public static final int ASSIGNACIO = 40;
+  public static final int ASSIGNACIO = 41;
   public static final int CONST = 20;
-  public static final int GE = 34;
-  public static final int OUTPUT = 36;
+  public static final int GE = 35;
+  public static final int OUTPUT = 37;
   public static final int OP_ENDIF = 7;
   public static final int ENDFUNCIO = 18;
-  public static final int INPUT = 35;
+  public static final int INPUT = 36;
   public static final int OP_WHILE = 11;
   public static final int OP_ELSE = 6;
   public static final int OP_DO = 12;
-  public static final int MINUS = 26;
+  public static final int MINUS = 27;
   public static final int OP_THEN = 5;
   public static final int TORNAR = 19;
   public static final int PRINCIPAL = 2;
-  public static final int NOT = 39;
-  public static final int AND = 37;
-  public static final int LT = 31;
-  public static final int TANC_CORX = 44;
-  public static final int TANC_PAR = 42;
-  public static final int OBR_CORX = 43;
-  public static final int OR = 38;
+  public static final int NOT = 40;
+  public static final int AND = 38;
+  public static final int LT = 32;
+  public static final int TANC_CORX = 45;
+  public static final int TANC_PAR = 43;
+  public static final int CARACTER = 53;
+  public static final int OBR_CORX = 44;
+  public static final int OR = 39;
   public static final int PROCEDIMENT = 15;
-  public static final int PLUS = 25;
+  public static final int PLUS = 26;
   public static final int FUNCIO = 17;
-  public static final int ID = 50;
-  public static final int OBR_PAR = 41;
-  public static final int LE = 32;
+  public static final int ID = 51;
+  public static final int OBR_PAR = 42;
+  public static final int LE = 33;
   public static final int EOF = 0;
   public static final int error = 1;
   public static final int OP_ENDSWITCH = 10;
   public static final int OP_TIPUS_CADENA = 21;
-  public static final int COMA = 46;
-  public static final int CADENA = 51;
+  public static final int COMA = 47;
+  public static final int CADENA = 52;
   public static final int DEFAULT_SWITCH = 9;
-  public static final int OP_TIPUS_LOGIC = 24;
-  public static final int EQ = 29;
-  public static final int ERROR = 49;
-  public static final int PUNT = 48;
+  public static final int OP_TIPUS_LOGIC = 25;
+  public static final int EQ = 30;
+  public static final int ERROR = 50;
+  public static final int PUNT = 49;
   public static final int ENDPRINCIPAL = 3;
   public static final int OP_IF = 4;
-  public static final int TIMES = 27;
-  public static final int OP_TIPUS_ENTER = 23;
-  public static final int VALOR_LOGIC = 53;
+  public static final int TIMES = 28;
+  public static final int OP_TIPUS_ENTER = 24;
+  public static final int VALOR_LOGIC = 55;
   public static final int OP_SWITCH = 8;
-  public static final int NE = 30;
-  public static final int PUNT_COMA = 47;
+  public static final int NE = 31;
+  public static final int PUNT_COMA = 48;
   public static final int OP_TIPUS_TUPLA = 22;
-  public static final int GT = 33;
+  public static final int GT = 34;
+  public static final int OP_TIPUS_CARACTER = 23;
   public static final String[] terminalNames = new String[] {
   "EOF",
   "error",
@@ -84,6 +86,7 @@ public class ParserSym {
   "CONST",
   "OP_TIPUS_CADENA",
   "OP_TIPUS_TUPLA",
+  "OP_TIPUS_CARACTER",
   "OP_TIPUS_ENTER",
   "OP_TIPUS_LOGIC",
   "PLUS",
@@ -113,6 +116,7 @@ public class ParserSym {
   "ERROR",
   "ID",
   "CADENA",
+  "CARACTER",
   "ENTER",
   "VALOR_LOGIC"
   };
