@@ -17,20 +17,20 @@ public abstract class InstrNode extends Node {
 
     public static class CallNode extends InstrNode {
         public String functionName;
-        public List<ArgNode> args;
+        public List<ExprNode> expr;
 
-        public CallNode(String functionName, List<ArgNode> args, int line, int column) {
+        public CallNode(String functionName, List<ExprNode> expr, int line, int column) {
             super(line, column);
             this.functionName = functionName;
-            this.args = args;
+            this.expr = expr;
         }
 
         @Override
         public void generateCode() {
             System.out.print(functionName + "(");
-            for (int i = 0; i < args.size(); i++) {
-                System.out.print(args.get(i));
-                if (i < args.size() - 1) System.out.print(", ");
+            for (int i = 0; i < expr.size(); i++) {
+                System.out.print(expr.get(i));
+                if (i < expr.size() - 1) System.out.print(", ");
             }
             System.out.println(");");
         }

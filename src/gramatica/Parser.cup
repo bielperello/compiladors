@@ -114,6 +114,7 @@ non terminal LoopNode loop;
 non terminal MethodNode method;
 non terminal TypeNode tipus;
 non terminal ExprNode assig, expr, terme;
+non terminal ExprNode expr_logic, expr_rel, expr_arit;
 non terminal ExprNode.LiteralNode index_opt;
 non terminal ArgNode arg;
 non terminal List<ArgNode> args;
@@ -190,7 +191,7 @@ decl ::= tipus:t list_id:l assig:a
                         } else {
                             ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
                                         "Tipus incompatible a l'assignació: variable " + var.getName() + " és " +
-                                        t.getKind() + "i s'hi assigna " + a.getKind()));
+                                        t.getKind() + " i s'hi assigna " + a.getKind()));
                         }
                     }
 
@@ -360,12 +361,12 @@ instr ::= call:c
             :}
 ;
 
-call ::= ID:id OBR_PAR:op args:a TANC_PAR
+call ::= ID:id OBR_PAR:op expr_list:e TANC_PAR
             {:
                 int lin = line(op);
                 int col = column(op);
 
-                InstrNode.CallNode c = new InstrNode.CallNode(id, a, lin, col);
+                InstrNode.CallNode c = new InstrNode.CallNode(id, e, lin, col);
 
                 Simbol s = currentScope.lookUp(id);
                 if (s == null) {
@@ -376,24 +377,23 @@ call ::= ID:id OBR_PAR:op args:a TANC_PAR
                     id + " no és un mètode."));
                 } else {
                     List<ArgNode> params = s.getParams();
-                    List<ArgNode> givenArgs = a;
 
                     if (params == null) params = new ArrayList<>();
 
-                    if(params.size() != givenArgs.size()) {
+                    if(params.size() != e.size()) {
                         ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
                                                     "Nombre d'arguments incorrecte a la crida de " + id +
                                                     ": s'esperaven " + params.size() +
-                                                    " i s'han passat " + givenArgs.size()));
+                                                    " i s'han passat " + e.size()));
                     } else {
                         for (int i = 0; i < params.size(); i++) {
                             TypeNode.Kind esperat = params.get(i).getType().getKind();
-                            TypeNode.Kind rebut = givenArgs.get(i).getType().getKind();
+                            TypeNode.Kind rebut = e.get(i).getKind();
 
                             if (rebut == null || esperat != rebut) {
                                 ErrorManager.add(new CompilerError(
-                                                    givenArgs.get(i).line,
-                                                    givenArgs.get(i).column,
+                                                    e.get(i).line,
+                                                    e.get(i).column,
                                                     CompilerError.TYPE.SEMANTIC,
                                                     "Tipus incorrecte a l'argument " + (i + 1) +
                                                     " de la crida a " + id + ": s'esperava " +
@@ -596,32 +596,47 @@ assig ::= ASSIGNACIO expr:e
             :}
 ;
 
-expr ::= expr:e op_arit:op terme:t
+expr ::= expr_logic:e
             {:
-                ExprNode.BinaryOpNode bin = new ExprNode.BinaryOpNode(e, op, t);
+                RESULT = e;
+            :}
+;
+
+expr_logic ::= expr_logic:el op_log:op expr_rel:er
+            {:
+                ExprNode.BinaryOpNode bin = new ExprNode.BinaryOpNode(el, op, er);
                 int lin = bin.line;
                 int col = bin.column;
 
-                // Comprovació de tipus aritmètic
-                if (!isInt(e.getKind()) || !isInt(t.getKind())) {
+                TypeNode.Kind t_left = el.getKind();
+                TypeNode.Kind t_right = er.getKind();
+
+                // Comprovació de tipus lògic
+                if (!isBoolean(t_left) || !isBoolean(t_right)) {
                     ErrorManager.add(new CompilerError(lin, col,
                         CompilerError.TYPE.SEMANTIC,
-                        "Operació aritmètica només permesa entre enters (" + e.getKind() + " " + op + " " + t.getKind() + ")"));
-                    bin.setKind(TypeNode.Kind.DOUBLE); // per evitar propagació d'error
+                        "Operació lògica només permesa entre booleans (" + t_left + " " + op + " " + t_right + ")"));
+                    bin.setKind(TypeNode.Kind.BOOLEAN);
                 } else {
-                    bin.setKind(TypeNode.Kind.DOUBLE);
+                    bin.setKind(TypeNode.Kind.BOOLEAN);
                 }
 
                 RESULT = bin;
             :}
-        | expr:e op_rel:op terme:t
+        | expr_rel:er
             {:
-                ExprNode.BinaryOpNode bin = new ExprNode.BinaryOpNode(e, op, t);
+                RESULT = er;
+            :}
+;
+
+expr_rel ::= expr_rel:er op_rel:op expr_arit:ea
+            {:
+                ExprNode.BinaryOpNode bin = new ExprNode.BinaryOpNode(er, op, ea);
                 int lin = bin.line;
                 int col = bin.column;
 
-                TypeNode.Kind t_left = e.getKind();
-                TypeNode.Kind t_right = t.getKind();
+                TypeNode.Kind t_left = er.getKind();
+                TypeNode.Kind t_right = ea.getKind();
 
                 if (op.equals("==") || op.equals("!=")) {
                     // == i != per tots els literals
@@ -634,66 +649,40 @@ expr ::= expr:e op_arit:op terme:t
                         // Qualsevol altre tipus amb aquests operadors és error
                         ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
                             "Operador relacional '" + op + "' només permès amb enters (" +
-                            e.getKind() + " " + op + " " + t.getKind() + ")"));
+                            t_left + " " + op + " " + t_right + ")"));
                         bin.setKind(TypeNode.Kind.BOOLEAN); // permetre continuar parsing
                     }
                 }
 
                 RESULT = bin;
             :}
-        | expr:e op_log:op terme:t
+        | expr_arit:ea
             {:
-                ExprNode.BinaryOpNode bin = new ExprNode.BinaryOpNode(e, op, t);
+                RESULT = ea;
+            :}
+;
+
+expr_arit ::= expr_arit:ea op_arit:op terme:t
+            {:
+                ExprNode.BinaryOpNode bin = new ExprNode.BinaryOpNode(ea, op, t);
                 int lin = bin.line;
                 int col = bin.column;
 
-                // Comprovació de tipus lògic
-                if (!isBoolean(e.getKind()) || !isBoolean(t.getKind())) {
+                // Comprovació de tipus aritmètic
+                if (!isInt(ea.getKind()) || !isInt(t.getKind())) {
                     ErrorManager.add(new CompilerError(lin, col,
                         CompilerError.TYPE.SEMANTIC,
-                        "Operació lògica només permesa entre booleans (" + e.getKind() + " " + op + " " + t.getKind() + ")"));
-                    bin.setKind(TypeNode.Kind.BOOLEAN);
+                        "Operació aritmètica només permesa entre enters (" + ea.getKind() + " " + op + " " + t.getKind() + ")"));
+                    bin.setKind(TypeNode.Kind.DOUBLE); // per evitar propagació d'error
                 } else {
-                    bin.setKind(TypeNode.Kind.BOOLEAN);
+                    bin.setKind(TypeNode.Kind.DOUBLE);
                 }
 
                 RESULT = bin;
             :}
-        | OBR_PAR expr:e TANC_PAR
-            {:
-                RESULT = e;
-            :}
-        | OBR_PAR:o expr_list:e TANC_PAR
-            {:
-                RESULT = new ExprNode.TupleNode(e, line(o), column(o));
-            :}
-        | NOT:n expr:e
-            {:
-                ExprNode.UnaryOpNode un = new ExprNode.UnaryOpNode("NOT", e, line(n), column(n));
-
-                if (!isBoolean(e.getKind())) {
-                    ErrorManager.add(new CompilerError(line(n), column(n),
-                                        CompilerError.TYPE.SEMANTIC,
-                                        "L'operador 'NOT' només pot aplicar-se sobre valors booleans"));
-                }
-
-                un.setKind(TypeNode.Kind.BOOLEAN);
-
-                RESULT = un;
-            :}
         | terme:t
             {:
                 RESULT = t;
-            :}
-;
-
-expr_list ::= expr:e COMA expr_list:el
-            {:
-                RESULT = combinar(e, el);
-            :}
-        | expr:e
-            {:
-                RESULT = crearLlista(e);
             :}
 ;
 
@@ -748,6 +737,28 @@ terme ::= VALOR_LOGIC:vl
 
                 RESULT = expr;
             :}
+        | OBR_PAR expr:e TANC_PAR
+            {:
+                RESULT = e;
+            :}
+        |OBR_PAR:o expr_list:e TANC_PAR
+            {:
+                RESULT = new ExprNode.TupleNode(e, line(o), column(o));
+            :}
+        | NOT:n expr:e
+            {:
+                ExprNode.UnaryOpNode un = new ExprNode.UnaryOpNode("NOT", e, line(n), column(n));
+
+                if (!isBoolean(e.getKind())) {
+                    ErrorManager.add(new CompilerError(line(n), column(n),
+                                        CompilerError.TYPE.SEMANTIC,
+                                        "L'operador 'NOT' només pot aplicar-se sobre valors booleans"));
+                }
+
+                un.setKind(TypeNode.Kind.BOOLEAN);
+
+                RESULT = un;
+            :}
 ;
 
 index_opt ::= OBR_CORX:o ENTER:e TANC_CORX
@@ -757,6 +768,20 @@ index_opt ::= OBR_CORX:o ENTER:e TANC_CORX
         | /* buit */
             {:
                 RESULT = null;
+            :}
+;
+
+expr_list ::= expr:e COMA expr_list:el
+            {:
+                RESULT = combinar(e, el);
+            :}
+        | expr:e
+            {:
+                RESULT = crearLlista(e);
+            :}
+        | /* buit */
+            {:
+                RESULT = new ArrayList<ExprNode>();
             :}
 ;
 
