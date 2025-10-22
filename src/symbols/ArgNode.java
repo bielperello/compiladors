@@ -17,6 +17,7 @@ public class ArgNode extends Node{
     public ExprNode.VarNode getVar() {
         return this.var;
     }
+    public String getName() { return this.var.getName(); }
 
     @Override
     public void generateCode() {

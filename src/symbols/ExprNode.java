@@ -71,22 +71,22 @@ public abstract class ExprNode extends Node {
 
     public static class VarNode extends ExprNode {
         private String name;
-        private int index;
+        private ExprNode index;
 
-        public VarNode(String name, Double index, int line, int column) {
+        public VarNode(String name, ExprNode index, int line, int column) {
             super(line, column);
             this.name = name;
-            this.index = index.intValue();
+            this.index = index;
         }
 
         public VarNode(String name) {
             super(Integer.MAX_VALUE, Integer.MAX_VALUE);
             this.name = name;
-            this.index = Integer.MIN_VALUE;
+            this.index = null;
         }
 
-        public void setIndex(Double i) { this.index = i.intValue(); }
-        public int getIndex() { return this.index; }
+        public void setIndex(ExprNode i) { this.index = i ; }
+        public ExprNode getIndex() { return this.index; }
         public String getName() {
             return this.name;
         }

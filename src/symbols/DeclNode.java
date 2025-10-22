@@ -3,10 +3,10 @@ package symbols;
 import java.util.List;
 
 public class DeclNode extends Node {
-    public boolean isConst;
-    public TypeNode type;
-    public List<ExprNode.VarNode> ids;
-    public ExprNode expr;
+    private final boolean isConst;
+    private final TypeNode type;
+    private final List<ExprNode.VarNode> ids;
+    private final ExprNode expr;
 
     public DeclNode(boolean isConst, TypeNode type, List<ExprNode.VarNode> ids, ExprNode expr,
                     int line, int column) {
@@ -25,18 +25,14 @@ public class DeclNode extends Node {
         this.expr = expr;
     }
 
+    public boolean isConst() { return this.isConst; }
+    public ExprNode getExpr() { return this.expr; }
     public TypeNode getType() {
         return type;
     }
+    public List<ExprNode.VarNode> getIds() { return this.ids; }
 
     @Override
     public void generateCode() {
-        for (ExprNode.VarNode id : ids) {
-            if (expr != null) {
-                System.out.println((isConst ? "const " : "") + type + " " + id + " = EXPRESIÓ");
-            } else {
-                System.out.println((isConst ? "const " : "") + type + " " + id + ";");
-            }
-        }
     }
 }

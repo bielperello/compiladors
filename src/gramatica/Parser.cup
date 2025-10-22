@@ -79,6 +79,45 @@ parser code {:
                 "Error intern: intent de tancar l'àmbit global"));
         }
     }
+
+    /**
+     * Valida una declaració (variable o constant), la comprova semànticament
+     * i l'afegeix a la taula de símbols.
+     * @param var El node de la variable/constant que es declara.
+     * @param type El tipus declarat.
+     * @param assig L'expressió d'assignació (pot ser null per a variables).
+     * @param isConst Un booleà que indica si és una constant.
+     */
+     private void validateAndAddSymbol(ExprNode.VarNode var, TypeNode type, ExprNode assig, boolean isConst) {
+        Simbol s = new Simbol(var.getName(), type, isConst, var.line, var.column);
+
+        if (isTuple(type.getKind())) {
+            if (assig == null) {
+                ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
+                        "Les tuples s'han d'inicialitzar sempre en la declaració."));
+                return; // No continuem si hi ha un error greu
+            }
+            if (assig instanceof ExprNode.TupleNode tupleNode) {
+                s.setTupleCamps(tupleNode.getElements());
+            }
+        }
+
+        // Comprovació de tipus per a qualsevol assignació
+        if (assig != null) {
+            TypeNode.Kind assignedType = assig.getKind();
+            if (!type.getKind().equals(assignedType) && assignedType != TypeNode.Kind.UNKNOWN) {
+                 ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
+                        "Tipus incompatible: es declara com a " + type.getKind() +
+                        " però s'assigna una expressió de tipus " + assignedType));
+            }
+        }
+
+        // Afegir a la taula de símbols, comprovant si ja existeix
+        if (!currentScope.add(s)) {
+            String errorMsg = (isConst ? "La constant '" : "La variable '") + var.getName() + "' ja ha estat declarada.";
+            ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC, errorMsg));
+        }
+     }
 :}
 
 terminal Symbol
@@ -113,9 +152,8 @@ non terminal CondNode.SwitchNode.CaseNode cas_opcio;
 non terminal LoopNode loop;
 non terminal MethodNode method;
 non terminal TypeNode tipus;
-non terminal ExprNode assig, expr, terme;
+non terminal ExprNode assig, expr, terme, index_opt;
 non terminal ExprNode expr_logic, expr_rel, expr_arit;
-non terminal ExprNode.LiteralNode index_opt;
 non terminal ArgNode arg;
 non terminal List<ArgNode> args;
 non terminal List<CondNode.SwitchNode.CaseNode> cas_opcions;
@@ -154,67 +192,18 @@ decls ::= decl:d decls:ds
 
 decl ::= tipus:t list_id:l assig:a
             {:
-                DeclNode d = new DeclNode(false, t, l, a);
-
                 for(ExprNode.VarNode var : l) {
-                    Simbol s = new Simbol(var.getName(), d.type, d.isConst, var.line, var.column);
-
-                    if(isTuple(t.getKind())) {
-                        if (a == null) {
-                            ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
-                                    "Les tuples s'han d'inicialitzar en el moment de la declaració " + var.getName()));
-                        } else if (a instanceof ExprNode.TupleNode tupleNode) {
-                            s.setTupleCamps(tupleNode.getElements());
-                        }
-                    }
-
-                    // Comprovació de tipus si hi ha assignació
-                    if (a != null && !d.type.getKind().equals(a.getKind())) {
-                        if (isTuple(a.getKind()) && a instanceof ExprNode.VarNode varNode && varNode.getIndex() != Integer.MIN_VALUE) {
-                            Simbol tupla = currentScope.lookUp(varNode.getName());
-
-                            if (tupla != null) {
-                                List<ExprNode> llista = tupla.getTupleCamps();
-                                int index = varNode.getIndex();
-                                if (index >= 0 && index < llista.size()) {
-                                    TypeNode.Kind tipusElement = llista.get(index).getKind();
-                                    if (!t.getKind().equals(tipusElement)) {
-                                        ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
-                                            "Tipus incompatible a l'assignació: variable " + var.getName() +
-                                            " és " + t.getKind() + " i s'hi assigna " + tipusElement));
-                                    }
-                                } else {
-                                    ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
-                                        "L'índex està defora del rang definit per la tupla: [0," + (llista.size() - 1) + "]"));
-                                }
-                            }
-                        } else {
-                            ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
-                                        "Tipus incompatible a l'assignació: variable " + var.getName() + " és " +
-                                        t.getKind() + " i s'hi assigna " + a.getKind()));
-                        }
-                    }
-
-                    if (!currentScope.add(s)) {
-                        ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
-                            "Variable ja declarada: " + var.getName()));
-                    }
+                    validateAndAddSymbol(var, t, a, false);
                 }
-                RESULT = d;
+
+                RESULT = new DeclNode(false, t, l, a, t.line, t.column);
             :}
         | CONST:c tipus:t list_id:l ASSIGNACIO expr:e
             {:
-                DeclNode d = new DeclNode(true, t, l, e, line(c), column(c));
-
                 for(ExprNode.VarNode var : l) {
-                    Simbol s = new Simbol(var.getName(), d.type, d.isConst, var.line, var.column);
-
-                    if (!currentScope.add(s)) {
-                        ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC,
-                            "Constant ja declarada: " + var.getName()));
-                    }
+                    validateAndAddSymbol(var, t, e, true);
                 }
-                RESULT = d;
+                RESULT = new DeclNode(true, t, l, e, line(c), column(c));
             :}
 ;
 
@@ -261,7 +250,7 @@ method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR
                                     " no coincideix amb el tipus de la funció: " + t.getKind()));
                 }
 
-                MethodNode m = new MethodNode(true, id, t, a, d, i, e, line(f), column(f), currentScope);
+                MethodNode m = new MethodNode(true, id, t, a, d, i, e, line(f), column(f));
                 closeScope();
 
                 RESULT = m;
@@ -292,7 +281,7 @@ method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR
             :}
          DOS_PUNTS decls:d instrs:i ENDPROCEDIMENT
             {:
-                MethodNode m = new MethodNode(true, id, null, a, d, i, null, line(p), column(p), currentScope);
+                MethodNode m = new MethodNode(true, id, null, a, d, i, null, line(p), column(p));
                 closeScope();
 
                 RESULT = m;
@@ -417,12 +406,13 @@ cond ::= OP_IF:op OBR_PAR expr:e TANC_PAR
                         "La condició del 'if' ha de ser de tipus booleà, trobat: " + e.getKind()));
                 }
             :}
-          OP_THEN instrs:i optional_cond:o
+        OP_THEN instrs:i
             {:
-                CondNode.IfNode if_node = new CondNode.IfNode(e, i, o, line(op), column(op));
                 closeScope();
-
-                RESULT = if_node;
+            :}
+        optional_cond:o OP_ENDIF
+            {:
+                RESULT = new CondNode.IfNode(e, i, o, line(op), column(op));
             :}
         | OP_SWITCH:op ID:id DOS_PUNTS
             {:
@@ -434,9 +424,9 @@ cond ::= OP_IF:op OBR_PAR expr:e TANC_PAR
 
                 openScope();
 
-                auxSwitchType = (s != null) ? s.getType().getKind() : TypeNode.Kind.NULL;
+                auxSwitchType = (s != null) ? s.getType().getKind() : TypeNode.Kind.UNKNOWN;
             :}
-          cas_opcions:c DEFAULT_SWITCH DOS_PUNTS instrs:i OP_ENDSWITCH
+        cas_opcions:c DEFAULT_SWITCH DOS_PUNTS instrs:i OP_ENDSWITCH
             {:
                 closeScope();
                 RESULT = new CondNode.SwitchNode(id, c, i, line(op), column(op));
@@ -447,12 +437,12 @@ optional_cond ::= OP_ELSE
             {:
                 openScope();
             :}
-          instrs:i OP_ENDIF
+        instrs:i
             {:
                 closeScope();
                 RESULT = i;
             :}
-        | OP_ENDIF
+        | /* buit */
             {:
                 RESULT = null;
             :}
@@ -472,7 +462,7 @@ cas_opcio ::= terme:t DOS_PUNTS:d instrs:i
             {:
                 TypeNode.Kind caseType = t.getKind();
 
-                if (auxSwitchType != TypeNode.Kind.NULL && auxSwitchType != caseType) {
+                if (auxSwitchType != TypeNode.Kind.UNKNOWN && auxSwitchType != caseType) {
                     ErrorManager.add(new CompilerError(line(d), column(d), CompilerError.TYPE.SEMANTIC,
                         "Tipus incompatible al 'case': esperat " + auxSwitchType + " però trobat " + caseType));
                 }
@@ -707,8 +697,13 @@ terme ::= VALOR_LOGIC:vl
                                     "La variable no és de tipus " + TypeNode.Kind.TUPLE + ", tipus trobat: " +
                                     s.getType().getKind()));
                 } else {
-                    var.setKind(s.getType().getKind());
-                    if (i != null) var.setIndex((Double)i.getValue());
+                    if (isTuple(s.getType().getKind()) && i != null) {
+                        var.setKind(TypeNode.Kind.UNKNOWN);
+                    } else {
+                        var.setKind(s.getType().getKind());
+                    }
+
+                    if (i != null) var.setIndex(i);
                 }
 
                 RESULT = var;
@@ -741,7 +736,7 @@ terme ::= VALOR_LOGIC:vl
             {:
                 RESULT = e;
             :}
-        |OBR_PAR:o expr_list:e TANC_PAR
+        | OBR_CORX:o expr_list:e TANC_CORX
             {:
                 RESULT = new ExprNode.TupleNode(e, line(o), column(o));
             :}
@@ -761,9 +756,14 @@ terme ::= VALOR_LOGIC:vl
             :}
 ;
 
-index_opt ::= OBR_CORX:o ENTER:e TANC_CORX
+index_opt ::= OBR_CORX:o expr:e TANC_CORX
             {:
-                RESULT = new ExprNode.LiteralNode(e, line(o), column(o));
+                if(!isInt(e.getKind())) {
+                    ErrorManager.add(new CompilerError(line(o), column(o), CompilerError.TYPE.SEMANTIC,
+                    "Tipus incompatible de l'index, esperat " + TypeNode.Kind.DOUBLE + ", rebut: " + e.getKind()));
+                }
+
+                RESULT = e;
             :}
         | /* buit */
             {:
@@ -773,13 +773,13 @@ index_opt ::= OBR_CORX:o ENTER:e TANC_CORX
 
 expr_list ::= expr:e COMA expr_list:el
             {:
-                RESULT = combinar(e, el);
-            :}
-        | expr:e
-            {:
-                RESULT = crearLlista(e);
-            :}
-        | /* buit */
+                    RESULT = combinar(e, el);
+                :}
+            | expr:e
+                {:
+                    RESULT = crearLlista(e);
+                :}
+            | /* buit */
             {:
                 RESULT = new ArrayList<ExprNode>();
             :}

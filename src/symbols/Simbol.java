@@ -92,4 +92,9 @@ public class Simbol {
         return String.format("Symbol{name='%s', type=%s, const=%s, initialized=%s, line=%d, column=%d}",
                 name, type, isConst, isInitialized, line, column);
     }
+
+    /* MÈTODES TAULA V2 */
+    public String getTypeName() { return null; };
+    public void setUniqueId(int id) { this.id = id; }
+
 }
