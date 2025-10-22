@@ -95,6 +95,4 @@ public class Simbol {
 
     /* MÈTODES TAULA V2 */
     public String getTypeName() { return null; };
-    public void setUniqueId(int id) { this.id = id; }
-
 }
