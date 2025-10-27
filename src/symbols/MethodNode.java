@@ -12,7 +12,6 @@ public class MethodNode extends Node {
     private final String name;
     private final TypeNode returnType; // null si és procediment
     private final List<ArgNode> params;
-    private final List<DeclNode> decls;
     private final List<InstrNode> instrs;
     private final ExprNode returnExpr; // només si és funció
 
@@ -20,7 +19,6 @@ public class MethodNode extends Node {
                       String name,
                       TypeNode returnType,
                       List<ArgNode> args,
-                      List<DeclNode> decls,
                       List<InstrNode> instrs,
                       ExprNode returnExpr,
                       int line,
@@ -30,7 +28,6 @@ public class MethodNode extends Node {
         this.name = name;
         this.returnType = returnType;
         this.params = args != null ? args : Collections.emptyList();
-        this.decls = decls != null ? decls : Collections.emptyList();
         this.instrs = instrs != null ? instrs : Collections.emptyList();
         this.returnExpr = returnExpr;
     }
@@ -43,7 +40,6 @@ public class MethodNode extends Node {
     public String getName() { return name; }
     public TypeNode getReturnType() { return returnType; }
     public List<ArgNode> getParams() { return params; }
-    public List<DeclNode> getDecls() { return decls; }
     public List<InstrNode> getInstrs() { return instrs; }
     public ExprNode getReturnExpr() { return returnExpr; }
 
@@ -54,7 +50,6 @@ public class MethodNode extends Node {
     @Override
     public void generateCode() {
         System.out.println((isFunction ? "funció " : "procediment ") + name + "()");
-        for (DeclNode decl : decls) decl.generateCode();
         for (InstrNode instr : instrs) instr.generateCode();
         if (isFunction && returnExpr != null)
             System.out.println("return [EXPRESSIÓ]");

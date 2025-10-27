@@ -64,6 +64,20 @@ public abstract class InstrNode extends Node {
         }
     }
 
+    public static class AssignNode extends InstrNode {
+        private final ExprNode.VarNode id;
+        private final ExprNode expr;
+
+        public AssignNode(ExprNode.VarNode id, ExprNode expr, int line, int column) {
+            super(line, column);
+            this.id = id;
+            this.expr = expr;
+        }
+
+        @Override
+        public void generateCode() {}
+    }
+
     public static class InstrDeclNode extends InstrNode {
         private DeclNode decl;
 

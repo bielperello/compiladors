@@ -7,7 +7,7 @@
  * Professor: Pere Palmer
  *
  * Generar:
- * java -jar java-cup-11b.jar -expect 27 -parser Parser -symbols ParserSym -destdir gen src/gramatica/Parser.cup
+ * java -jar java-cup-11b.jar -expect 16 -parser Parser -symbols ParserSym -destdir gen src/gramatica/Parser.cup
  */
 import java_cup.runtime.*;
 import java_cup.runtime.ComplexSymbolFactory.ComplexSymbol;
@@ -72,10 +72,9 @@ parser code {:
      * @param var El node de la variable/constant que es declara.
      * @param type El tipus declarat.
      * @param assig L'expressió d'assignació (pot ser null per a variables).
-     * @param isConst Un booleà que indica si és una constant.
      */
-     private void validateAndAddSymbol(ExprNode.VarNode var, TypeNode type, ExprNode assig, boolean isConst) {
-        Simbol s = new Simbol(var.getName(), type, isConst, var.line, var.column, currentScope.getScopeId());
+     private void validateAndAddSymbol(ExprNode.VarNode var, TypeNode type, Simbol.STIPUS st, ExprNode assig) {
+        Simbol s = new Simbol(var.getName(), type, st, var.line, var.column, currentScope.getScopeId());
 
         if (isTuple(type.getKind())) {
             if (assig == null) {
@@ -96,11 +95,13 @@ parser code {:
                         "Tipus incompatible: es declara com a " + type.getKind() +
                         " però s'assigna una expressió de tipus " + assignedType));
             }
+
+            s.setInitialized(true);
         }
 
         // Afegir a la taula de símbols, comprovant si ja existeix
         if (!currentScope.add(s)) {
-            String errorMsg = (isConst ? "La constant '" : "La variable '") + var.getName() + "' ja ha estat declarada.";
+            String errorMsg = (s.isConst() ? "La constant '" : "La variable '") + var.getName() + "' ja ha estat declarada.";
             ErrorManager.add(new CompilerError(var.line, var.column, CompilerError.TYPE.SEMANTIC, errorMsg));
         }
      }
@@ -146,6 +147,7 @@ non terminal List<CondNode.SwitchNode.CaseNode> cas_opcions;
 non terminal String op_arit, op_rel, op_log;
 non terminal List<ExprNode.VarNode> list_id;
 non terminal List<ExprNode> expr_list;
+non terminal InstrNode.AssignNode assign_instr;
 
 // Associativitat i precedència dels operadors
 precedence left OR;            // OR més baix que AND
@@ -180,17 +182,17 @@ decls ::= decl:d decls:ds
 decl ::= tipus:t list_id:l assig:a
             {:
                 for(ExprNode.VarNode var : l) {
-                    validateAndAddSymbol(var, t, a, false);
+                    validateAndAddSymbol(var, t, Simbol.STIPUS.VARIABLE ,a);
                 }
 
-                RESULT = new DeclNode(false, t, l, a, t.line, t.column);
+                RESULT = new DeclNode(t, l, a, t.line, t.column);
             :}
         | CONST:c tipus:t list_id:l ASSIGNACIO expr:e
             {:
                 for(ExprNode.VarNode var : l) {
-                    validateAndAddSymbol(var, t, e, true);
+                    validateAndAddSymbol(var, t, Simbol.STIPUS.CONSTANT, e);
                 }
-                RESULT = new DeclNode(true, t, l, e, t.line, t.column);
+                RESULT = new DeclNode(t, l, e, t.line, t.column);
             :}
 ;
 
@@ -206,7 +208,7 @@ methods ::= method:m methods:ms
 
 method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR
             {:
-                Simbol s = new Simbol(id, t, false, Simbol.Methods.FUNCIO, fleft, fright, a, currentScope.getScopeId());
+                Simbol s = new Simbol(id, t, Simbol.STIPUS.FUNCIO, fleft, fright, a, currentScope.getScopeId());
 
                 if (!currentScope.add(s)) {
                     ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
@@ -218,7 +220,7 @@ method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR
                 for (ArgNode arg : a) {
                     String name = arg.getVar().getName();
                     TypeNode type = arg.getType();
-                    Simbol sA = new Simbol(name, type, false, arg.line, arg.column, currentScope.getScopeId());
+                    Simbol sA = new Simbol(name, type, Simbol.STIPUS.VARIABLE, arg.line, arg.column, currentScope.getScopeId());
 
                     if(!currentScope.add(sA)) {
                         ErrorManager.add(new CompilerError(arg.line, arg.column, CompilerError.TYPE.SEMANTIC,
@@ -226,7 +228,7 @@ method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR
                     }
                 }
             :}
-          DOS_PUNTS:dp decls:d instrs:i TORNAR expr:e ENDFUNCIO
+          DOS_PUNTS instrs:i TORNAR expr:e ENDFUNCIO
             {:
                 if(!e.getKind().equals(t.getKind())) {
                     ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
@@ -234,14 +236,14 @@ method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR
                                     " no coincideix amb el tipus de la funció: " + t.getKind()));
                 }
 
-                MethodNode m = new MethodNode(true, id, t, a, d, i, e, fleft, fright);
+                MethodNode m = new MethodNode(true, id, t, a, i, e, fleft, fright);
                 closeScope();
 
                 RESULT = m;
             :}
         | PROCEDIMENT:p ID:id OBR_PAR args:a TANC_PAR
             {:
-                Simbol s = new Simbol(id, null, false, Simbol.Methods.PROCEDIMENT, pleft, pright, a, currentScope.getScopeId());
+                Simbol s = new Simbol(id, new TypeNode(TypeNode.Kind.VOID, pleft, pright), Simbol.STIPUS.PROCEDIMENT, pleft, pright, a, currentScope.getScopeId());
                 if (!currentScope.add(s)) {
                     ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                         "Nom ja utilitzat: " + id));
@@ -252,7 +254,7 @@ method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR
                 for (ArgNode arg : a) {
                     String name = arg.getVar().getName();
                     TypeNode type = arg.getType();
-                    Simbol sA = new Simbol(name, type, false, arg.line, arg.column, currentScope.getScopeId());
+                    Simbol sA = new Simbol(name, type, Simbol.STIPUS.VARIABLE, arg.line, arg.column, currentScope.getScopeId());
 
                     if(!currentScope.add(sA)) {
                         ErrorManager.add(new CompilerError(arg.line, arg.column, CompilerError.TYPE.SEMANTIC,
@@ -260,9 +262,9 @@ method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR
                     }
                 }
             :}
-         DOS_PUNTS decls:d instrs:i ENDPROCEDIMENT
+          DOS_PUNTS instrs:i ENDPROCEDIMENT
             {:
-                MethodNode m = new MethodNode(true, id, null, a, d, i, null, pleft, pright);
+                MethodNode m = new MethodNode(true, id, null, a, i, null, pleft, pright);
                 closeScope();
 
                 RESULT = m;
@@ -299,35 +301,38 @@ instr ::= call:c
             {:
                 RESULT = s;
             :}
-        | ID:id ASSIGNACIO expr:e
+        | assign_instr:a
             {:
-                Simbol s = currentScope.lookUp(id);
-                if (s == null) {
-                    ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
-                                        "Variable no declarada: " + id));
-                } else {
-                    // Comprovar tipus
-                    if (!s.getType().getKind().equals(e.getKind())) {
-                        ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
-                            "Tipus incompatible a l'assignació: variable " + id +
-                            " és " + s.getType().getKind() + " i s'hi assigna " + e.getKind()));
-                    }
-
-                    // Comprovar constant
-                    if (s.isConst()) {
-                        ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
-                            "No es pot assignar a una constant: " + id));
-                    }
-
-                    s.setInitialized(true);
-
-                    DeclNode d = new DeclNode(false, s.getType(), crearLlista(new ExprNode.VarNode(id, idleft, idright)), e);
-                    RESULT = new InstrNode.InstrDeclNode(d);
-                }
+                RESULT = a;
             :}
         | decl:d
             {:
                 RESULT = new InstrNode.InstrDeclNode(d);
+            :}
+;
+
+assign_instr ::= ID:id ASSIGNACIO expr:e
+            {:
+                Simbol s = currentScope.lookUp(id);
+                if (s == null) {
+                    ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
+                        "Variable no declarada: " + id));
+                } else {
+                // Comprovar tipus
+                if (!s.getKind().equals(e.getKind())) {
+                    ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
+                        "Tipus incompatible a l'assignació: variable " + id +
+                        " és " + s.getKind() + " i s'hi assigna " + e.getKind()));
+                }
+
+                // Comprovar constant
+                if (s.isConst()) {
+                    ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
+                        "No es pot assignar a una constant: " + id));
+                }
+
+                RESULT = new InstrNode.AssignNode((new ExprNode.VarNode(id, idleft, idright)), e, idleft, idright);
+                }
             :}
 ;
 
@@ -339,7 +344,7 @@ call ::= ID:id OBR_PAR:op expr_list:e TANC_PAR
                 if (s == null) {
                     ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                         "Mètode no declarat: " + id));
-                } else if (s.getMethodType() == Simbol.Methods.NONE) {
+                } else if (!s.isMethod()) {
                     ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                     id + " no és un mètode."));
                 } else {
@@ -402,7 +407,7 @@ cond ::= OP_IF:op OBR_PAR expr:e TANC_PAR
 
                 openScope();
 
-                auxSwitchType = (s != null) ? s.getType().getKind() : TypeNode.Kind.UNKNOWN;
+                auxSwitchType = (s != null) ? s.getKind() : TypeNode.Kind.UNKNOWN;
             :}
         cas_opcions:c DEFAULT_SWITCH DOS_PUNTS instrs:i OP_ENDSWITCH
             {:
@@ -664,15 +669,15 @@ terme ::= VALOR_LOGIC:vl
                 if (s == null) {
                     ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                                     "Variable no declarada: " + id));
-                } else if (!isTuple(s.getType().getKind()) && i != null) {
+                } else if (!isTuple(s.getKind()) && i != null) {
                     ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                                     "La variable no és de tipus " + TypeNode.Kind.TUPLE + ", tipus trobat: " +
-                                    s.getType().getKind()));
+                                    s.getKind()));
                 } else {
-                    if (isTuple(s.getType().getKind()) && i != null) {
+                    if (isTuple(s.getKind()) && i != null) {
                         var.setKind(TypeNode.Kind.UNKNOWN);
                     } else {
-                        var.setKind(s.getType().getKind());
+                        var.setKind(s.getKind());
                     }
 
                     if (i != null) var.setIndex(i);
@@ -695,11 +700,11 @@ terme ::= VALOR_LOGIC:vl
                 if (s == null) {
                     ErrorManager.add(new CompilerError(c.line, c.column, CompilerError.TYPE.SEMANTIC,
                         "Crida a mètode no declarat: " + c.functionName));
-                } else if (s.getMethodType() == Simbol.Methods.PROCEDIMENT) {
+                } else if (s.getStipus() == Simbol.STIPUS.PROCEDIMENT) {
                     ErrorManager.add(new CompilerError(c.line, c.column, CompilerError.TYPE.SEMANTIC,
                         "Un procediment no pot aparèixer dins una expressió: " + c.functionName));
                 } else {
-                    expr.setKind(s.getType().getKind());
+                    expr.setKind(s.getKind());
                 }
 
                 RESULT = expr;
