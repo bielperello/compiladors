@@ -10,6 +10,7 @@
  * java -jar java-cup-11b.jar -expect 27 -parser Parser -symbols ParserSym -destdir gen src/gramatica/Parser.cup
  */
 import java_cup.runtime.*;
+import java_cup.runtime.ComplexSymbolFactory.ComplexSymbol;
 import symbols.*;
 import errors.*;
 import java.util.*;
@@ -17,24 +18,6 @@ import java.util.*;
 class Parser;
 
 parser code {:
-    private int line(java_cup.runtime.Symbol s) {
-        if(s == null) return safeLine(s);
-        return s.left;
-    }
-
-    private int column(java_cup.runtime.Symbol s) {
-        if (s == null) return safeColumn(s);
-        return s.right;
-    }
-
-    private int safeLine(Symbol s) {
-        return (s != null && s.left >= 0) ? s.left : 0;
-    }
-
-    private int safeColumn(Symbol s) {
-        return (s != null && s.right >= 0) ? s.right : 0;
-    }
-
     public <T> List<T> combinar(T first, List<T> rest) {
         List<T> list = new ArrayList<>();
         list.add(first);
@@ -48,7 +31,7 @@ parser code {:
         return list;
     }
 
-    public static SymbolTable currentScope = new SymbolTable(null);
+
     private TypeNode.Kind auxSwitchType;
 
     public boolean isInt(TypeNode.Kind t) {
@@ -67,12 +50,15 @@ parser code {:
         return (t == TypeNode.Kind.TUPLE);
     }
 
+    public static SymbolTable currentScope = new SymbolTable(null);
+
     public void openScope() {
         currentScope = new SymbolTable(currentScope);
     }
 
     public void closeScope() {
-        if(currentScope.getParent() != null) {
+        if (currentScope.getParent() != null) {
+            SymbolTable.registerClosedScope(currentScope);
             currentScope = currentScope.getParent();
         } else {
             ErrorManager.add(new CompilerError(CompilerError.TYPE.SEMANTIC,
@@ -89,7 +75,7 @@ parser code {:
      * @param isConst Un booleà que indica si és una constant.
      */
      private void validateAndAddSymbol(ExprNode.VarNode var, TypeNode type, ExprNode assig, boolean isConst) {
-        Simbol s = new Simbol(var.getName(), type, isConst, var.line, var.column);
+        Simbol s = new Simbol(var.getName(), type, isConst, var.line, var.column, currentScope.getScopeId());
 
         if (isTuple(type.getKind())) {
             if (assig == null) {
@@ -176,7 +162,8 @@ start with program;
 
 program ::= PRINCIPAL:p ID:id DOS_PUNTS decls:d methods:m instrs:i ENDPRINCIPAL
             {:
-                RESULT = new ProgramNode(id, d, m, i, line(p), column(p));
+                RESULT = new ProgramNode(id, d, m, i, pleft, pright);
+                SymbolTable.registerClosedScope(currentScope);
             :}
 ;
 
@@ -203,7 +190,7 @@ decl ::= tipus:t list_id:l assig:a
                 for(ExprNode.VarNode var : l) {
                     validateAndAddSymbol(var, t, e, true);
                 }
-                RESULT = new DeclNode(true, t, l, e, line(c), column(c));
+                RESULT = new DeclNode(true, t, l, e, t.line, t.column);
             :}
 ;
 
@@ -219,13 +206,10 @@ methods ::= method:m methods:ms
 
 method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR
             {:
-                int lin = line(f);
-                int col = column(f);
-
-                Simbol s = new Simbol(id, t, false, Simbol.Methods.FUNCIO, lin, col, a);
+                Simbol s = new Simbol(id, t, false, Simbol.Methods.FUNCIO, fleft, fright, a, currentScope.getScopeId());
 
                 if (!currentScope.add(s)) {
-                    ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                         "Nom ja utilitzat: " + id));
                 }
 
@@ -234,10 +218,10 @@ method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR
                 for (ArgNode arg : a) {
                     String name = arg.getVar().getName();
                     TypeNode type = arg.getType();
-                    Simbol sA = new Simbol(name, type, false, lin, col);
+                    Simbol sA = new Simbol(name, type, false, arg.line, arg.column, currentScope.getScopeId());
 
                     if(!currentScope.add(sA)) {
-                        ErrorManager.add(new CompilerError(arg.getVar().line, arg.getVar().column, CompilerError.TYPE.SEMANTIC,
+                        ErrorManager.add(new CompilerError(arg.line, arg.column, CompilerError.TYPE.SEMANTIC,
                                     "Argument ja declarat: " + name));
                     }
                 }
@@ -245,24 +229,21 @@ method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR
           DOS_PUNTS:dp decls:d instrs:i TORNAR expr:e ENDFUNCIO
             {:
                 if(!e.getKind().equals(t.getKind())) {
-                    ErrorManager.add(new CompilerError(line(dp), column(dp), CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
                                     "El tipus del retorn " + e.getKind() +
                                     " no coincideix amb el tipus de la funció: " + t.getKind()));
                 }
 
-                MethodNode m = new MethodNode(true, id, t, a, d, i, e, line(f), column(f));
+                MethodNode m = new MethodNode(true, id, t, a, d, i, e, fleft, fright);
                 closeScope();
 
                 RESULT = m;
             :}
         | PROCEDIMENT:p ID:id OBR_PAR args:a TANC_PAR
             {:
-                int lin = line(p);
-                int col = column(p);
-
-                Simbol s = new Simbol(id, null, false, Simbol.Methods.PROCEDIMENT, lin, col, a);
+                Simbol s = new Simbol(id, null, false, Simbol.Methods.PROCEDIMENT, pleft, pright, a, currentScope.getScopeId());
                 if (!currentScope.add(s)) {
-                    ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                         "Nom ja utilitzat: " + id));
                 }
 
@@ -271,17 +252,17 @@ method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR
                 for (ArgNode arg : a) {
                     String name = arg.getVar().getName();
                     TypeNode type = arg.getType();
-                    Simbol sA = new Simbol(name, type, false, lin, col);
+                    Simbol sA = new Simbol(name, type, false, arg.line, arg.column, currentScope.getScopeId());
 
                     if(!currentScope.add(sA)) {
-                        ErrorManager.add(new CompilerError(arg.getVar().line, arg.getVar().column, CompilerError.TYPE.SEMANTIC,
+                        ErrorManager.add(new CompilerError(arg.line, arg.column, CompilerError.TYPE.SEMANTIC,
                                     "Argument ja declarat: " + name));
                     }
                 }
             :}
          DOS_PUNTS decls:d instrs:i ENDPROCEDIMENT
             {:
-                MethodNode m = new MethodNode(true, id, null, a, d, i, null, line(p), column(p));
+                MethodNode m = new MethodNode(true, id, null, a, d, i, null, pleft, pright);
                 closeScope();
 
                 RESULT = m;
@@ -322,7 +303,7 @@ instr ::= call:c
             {:
                 Simbol s = currentScope.lookUp(id);
                 if (s == null) {
-                    ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                                         "Variable no declarada: " + id));
                 } else {
                     // Comprovar tipus
@@ -334,13 +315,13 @@ instr ::= call:c
 
                     // Comprovar constant
                     if (s.isConst()) {
-                        ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
+                        ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                             "No es pot assignar a una constant: " + id));
                     }
 
                     s.setInitialized(true);
 
-                    DeclNode d = new DeclNode(false, s.getType(), crearLlista(new ExprNode.VarNode(id)), e);
+                    DeclNode d = new DeclNode(false, s.getType(), crearLlista(new ExprNode.VarNode(id, idleft, idright)), e);
                     RESULT = new InstrNode.InstrDeclNode(d);
                 }
             :}
@@ -352,17 +333,14 @@ instr ::= call:c
 
 call ::= ID:id OBR_PAR:op expr_list:e TANC_PAR
             {:
-                int lin = line(op);
-                int col = column(op);
-
-                InstrNode.CallNode c = new InstrNode.CallNode(id, e, lin, col);
+                InstrNode.CallNode c = new InstrNode.CallNode(id, e, idleft, idright);
 
                 Simbol s = currentScope.lookUp(id);
                 if (s == null) {
-                    ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                         "Mètode no declarat: " + id));
                 } else if (s.getMethodType() == Simbol.Methods.NONE) {
-                    ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                     id + " no és un mètode."));
                 } else {
                     List<ArgNode> params = s.getParams();
@@ -370,7 +348,7 @@ call ::= ID:id OBR_PAR:op expr_list:e TANC_PAR
                     if (params == null) params = new ArrayList<>();
 
                     if(params.size() != e.size()) {
-                        ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
+                        ErrorManager.add(new CompilerError(eleft, eright, CompilerError.TYPE.SEMANTIC,
                                                     "Nombre d'arguments incorrecte a la crida de " + id +
                                                     ": s'esperaven " + params.size() +
                                                     " i s'han passat " + e.size()));
@@ -402,7 +380,7 @@ cond ::= OP_IF:op OBR_PAR expr:e TANC_PAR
                 openScope();
 
                 if (!isBoolean(e.getKind())) {
-                    ErrorManager.add(new CompilerError(line(op), column(op), CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
                         "La condició del 'if' ha de ser de tipus booleà, trobat: " + e.getKind()));
                 }
             :}
@@ -412,13 +390,13 @@ cond ::= OP_IF:op OBR_PAR expr:e TANC_PAR
             :}
         optional_cond:o OP_ENDIF
             {:
-                RESULT = new CondNode.IfNode(e, i, o, line(op), column(op));
+                RESULT = new CondNode.IfNode(e, i, o, opleft, opright);
             :}
         | OP_SWITCH:op ID:id DOS_PUNTS
             {:
                 Simbol s = currentScope.lookUp(id);
                 if (s == null) {
-                    ErrorManager.add(new CompilerError(line(op), column(op), CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                         "Variable no declarada al 'switch': " + id));
                 }
 
@@ -429,7 +407,7 @@ cond ::= OP_IF:op OBR_PAR expr:e TANC_PAR
         cas_opcions:c DEFAULT_SWITCH DOS_PUNTS instrs:i OP_ENDSWITCH
             {:
                 closeScope();
-                RESULT = new CondNode.SwitchNode(id, c, i, line(op), column(op));
+                RESULT = new CondNode.SwitchNode(id, c, i, opleft, opright);
             :}
 ;
 
@@ -463,11 +441,11 @@ cas_opcio ::= terme:t DOS_PUNTS:d instrs:i
                 TypeNode.Kind caseType = t.getKind();
 
                 if (auxSwitchType != TypeNode.Kind.UNKNOWN && auxSwitchType != caseType) {
-                    ErrorManager.add(new CompilerError(line(d), column(d), CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(t.line, t.column, CompilerError.TYPE.SEMANTIC,
                         "Tipus incompatible al 'case': esperat " + auxSwitchType + " però trobat " + caseType));
                 }
 
-                RESULT = new CondNode.SwitchNode.CaseNode(t, i, line(d), column(d));
+                RESULT = new CondNode.SwitchNode.CaseNode(t, i, t.line, t.column);
             :}
 ;
 
@@ -475,7 +453,7 @@ loop ::= OP_WHILE:w OBR_PAR expr:e TANC_PAR
             {:
                 if (!isBoolean(e.getKind())) {
                     ErrorManager.add(new CompilerError(
-                        line(w), column(w), CompilerError.TYPE.SEMANTIC,
+                        e.line, e.column, CompilerError.TYPE.SEMANTIC,
                         "La condició del 'while' ha de ser de tipus booleà, trobat: " + e.getKind()
                     ));
                 }
@@ -486,7 +464,7 @@ loop ::= OP_WHILE:w OBR_PAR expr:e TANC_PAR
             {:
                 closeScope();
 
-                RESULT = new LoopNode.WhileNode(e, i, line(w), column(w));
+                RESULT = new LoopNode.WhileNode(e, i, wleft, wright);
             :}
         | OP_DO:d
             {:
@@ -497,11 +475,11 @@ loop ::= OP_WHILE:w OBR_PAR expr:e TANC_PAR
                 closeScope();
 
                 if(!isBoolean(e.getKind())) {
-                    ErrorManager.add(new CompilerError(line(d), column(d), CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
                         "La condició del 'do-while' ha de ser de tipus booleà, trobat: " + e.getKind()));
                 }
 
-                RESULT = new LoopNode.DoWhileNode(i, e, line(d), column(d));
+                RESULT = new LoopNode.DoWhileNode(i, e, dleft, dright);
             :}
 ;
 
@@ -510,49 +488,49 @@ entrada ::= INPUT:i OBR_PAR ID:id TANC_PAR
                 Simbol s = currentScope.lookUp(id);
 
                 if(s == null) {
-                    ErrorManager.add(new CompilerError(line(i), column(i), CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                         "Variable " + id + " no declarada"));
                 }
 
-                RESULT = new InstrNode.InputNode(id, line(i), column(i));
+                RESULT = new InstrNode.InputNode(id, ileft, iright);
             :}
 ;
 
 sortida ::= OUTPUT:o OBR_PAR expr:e TANC_PAR
             {:
-                RESULT = new InstrNode.OutputNode(e, line(o), column(o));
+                RESULT = new InstrNode.OutputNode(e, oleft, oright);
             :}
 ;
 
 tipus ::= OP_TIPUS_ENTER:op
             {:
-                RESULT = new TypeNode(TypeNode.Kind.DOUBLE, line(op), column(op));
+                RESULT = new TypeNode(TypeNode.Kind.DOUBLE, opleft, opright);
             :}
         | OP_TIPUS_CADENA:op
             {:
-                RESULT = new TypeNode(TypeNode.Kind.STRING, line(op), column(op));
+                RESULT = new TypeNode(TypeNode.Kind.STRING, opleft, opright);
             :}
         | OP_TIPUS_CARACTER:op
             {:
-                RESULT = new TypeNode(TypeNode.Kind.CHARACTER, line(op), column(op));
+                RESULT = new TypeNode(TypeNode.Kind.CHARACTER, opleft, opright);
             :}
         | OP_TIPUS_LOGIC:op
             {:
-                RESULT = new TypeNode(TypeNode.Kind.BOOLEAN, line(op), column(op));
+                RESULT = new TypeNode(TypeNode.Kind.BOOLEAN, opleft, opright);
             :}
         | OP_TIPUS_TUPLA:op
             {:
-                RESULT = new TypeNode(TypeNode.Kind.TUPLE, line(op), column(op));
+                RESULT = new TypeNode(TypeNode.Kind.TUPLE, opleft, opright);
             :}
 ;
 
 list_id ::= ID:id COMA list_id:l
             {:
-                RESULT = combinar(new ExprNode.VarNode(id), l);
+                RESULT = combinar(new ExprNode.VarNode(id, idleft, idright), l);
             :}
         | ID:id
             {:
-                RESULT = crearLlista(new ExprNode.VarNode(id));
+                RESULT = crearLlista(new ExprNode.VarNode(id, idleft, idright));
             :}
 ;
 
@@ -572,7 +550,7 @@ args ::= arg:a COMA args:as
 
 arg ::= ID:id DOS_PUNTS tipus:t
             {:
-                RESULT = new ArgNode(new ExprNode.VarNode(id), t);
+                RESULT = new ArgNode(new ExprNode.VarNode(id, idleft, idright), t);
             :}
 ;
 
@@ -595,15 +573,13 @@ expr ::= expr_logic:e
 expr_logic ::= expr_logic:el op_log:op expr_rel:er
             {:
                 ExprNode.BinaryOpNode bin = new ExprNode.BinaryOpNode(el, op, er);
-                int lin = bin.line;
-                int col = bin.column;
 
                 TypeNode.Kind t_left = el.getKind();
                 TypeNode.Kind t_right = er.getKind();
 
                 // Comprovació de tipus lògic
                 if (!isBoolean(t_left) || !isBoolean(t_right)) {
-                    ErrorManager.add(new CompilerError(lin, col,
+                    ErrorManager.add(new CompilerError(opleft, opright,
                         CompilerError.TYPE.SEMANTIC,
                         "Operació lògica només permesa entre booleans (" + t_left + " " + op + " " + t_right + ")"));
                     bin.setKind(TypeNode.Kind.BOOLEAN);
@@ -622,8 +598,6 @@ expr_logic ::= expr_logic:el op_log:op expr_rel:er
 expr_rel ::= expr_rel:er op_rel:op expr_arit:ea
             {:
                 ExprNode.BinaryOpNode bin = new ExprNode.BinaryOpNode(er, op, ea);
-                int lin = bin.line;
-                int col = bin.column;
 
                 TypeNode.Kind t_left = er.getKind();
                 TypeNode.Kind t_right = ea.getKind();
@@ -637,7 +611,7 @@ expr_rel ::= expr_rel:er op_rel:op expr_arit:ea
                         bin.setKind(TypeNode.Kind.BOOLEAN);
                     } else {
                         // Qualsevol altre tipus amb aquests operadors és error
-                        ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
+                        ErrorManager.add(new CompilerError(opleft, opright, CompilerError.TYPE.SEMANTIC,
                             "Operador relacional '" + op + "' només permès amb enters (" +
                             t_left + " " + op + " " + t_right + ")"));
                         bin.setKind(TypeNode.Kind.BOOLEAN); // permetre continuar parsing
@@ -655,12 +629,10 @@ expr_rel ::= expr_rel:er op_rel:op expr_arit:ea
 expr_arit ::= expr_arit:ea op_arit:op terme:t
             {:
                 ExprNode.BinaryOpNode bin = new ExprNode.BinaryOpNode(ea, op, t);
-                int lin = bin.line;
-                int col = bin.column;
 
                 // Comprovació de tipus aritmètic
                 if (!isInt(ea.getKind()) || !isInt(t.getKind())) {
-                    ErrorManager.add(new CompilerError(lin, col,
+                    ErrorManager.add(new CompilerError(opleft, opright,
                         CompilerError.TYPE.SEMANTIC,
                         "Operació aritmètica només permesa entre enters (" + ea.getKind() + " " + op + " " + t.getKind() + ")"));
                     bin.setKind(TypeNode.Kind.DOUBLE); // per evitar propagació d'error
@@ -686,14 +658,14 @@ terme ::= VALOR_LOGIC:vl
             :}
         | ID:id index_opt:i
             {:
-                ExprNode.VarNode var = new ExprNode.VarNode(id);
+                ExprNode.VarNode var = new ExprNode.VarNode(id, idleft, idright);
                 Simbol s = currentScope.lookUp(id);
 
                 if (s == null) {
-                    ErrorManager.add(new CompilerError(0, 0, CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                                     "Variable no declarada: " + id));
                 } else if (!isTuple(s.getType().getKind()) && i != null) {
-                    ErrorManager.add(new CompilerError(0, 0, CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                                     "La variable no és de tipus " + TypeNode.Kind.TUPLE + ", tipus trobat: " +
                                     s.getType().getKind()));
                 } else {
@@ -738,14 +710,14 @@ terme ::= VALOR_LOGIC:vl
             :}
         | OBR_CORX:o expr_list:e TANC_CORX
             {:
-                RESULT = new ExprNode.TupleNode(e, line(o), column(o));
+                RESULT = new ExprNode.TupleNode(e, oleft, oright);
             :}
         | NOT:n expr:e
             {:
-                ExprNode.UnaryOpNode un = new ExprNode.UnaryOpNode("NOT", e, line(n), column(n));
+                ExprNode.UnaryOpNode un = new ExprNode.UnaryOpNode("NOT", e, nleft, nright);
 
                 if (!isBoolean(e.getKind())) {
-                    ErrorManager.add(new CompilerError(line(n), column(n),
+                    ErrorManager.add(new CompilerError(nleft, nright,
                                         CompilerError.TYPE.SEMANTIC,
                                         "L'operador 'NOT' només pot aplicar-se sobre valors booleans"));
                 }
@@ -759,7 +731,7 @@ terme ::= VALOR_LOGIC:vl
 index_opt ::= OBR_CORX:o expr:e TANC_CORX
             {:
                 if(!isInt(e.getKind())) {
-                    ErrorManager.add(new CompilerError(line(o), column(o), CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
                     "Tipus incompatible de l'index, esperat " + TypeNode.Kind.DOUBLE + ", rebut: " + e.getKind()));
                 }
 

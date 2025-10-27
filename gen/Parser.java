@@ -4,6 +4,7 @@
 //----------------------------------------------------
 
 import java_cup.runtime.*;
+import java_cup.runtime.ComplexSymbolFactory.ComplexSymbol;
 import symbols.*;
 import errors.*;
 import java.util.*;
@@ -594,24 +595,6 @@ public class Parser extends java_cup.runtime.lr_parser {
 
 
 
-    private int line(java_cup.runtime.Symbol s) {
-        if(s == null) return safeLine(s);
-        return s.left;
-    }
-
-    private int column(java_cup.runtime.Symbol s) {
-        if (s == null) return safeColumn(s);
-        return s.right;
-    }
-
-    private int safeLine(Symbol s) {
-        return (s != null && s.left >= 0) ? s.left : 0;
-    }
-
-    private int safeColumn(Symbol s) {
-        return (s != null && s.right >= 0) ? s.right : 0;
-    }
-
     public <T> List<T> combinar(T first, List<T> rest) {
         List<T> list = new ArrayList<>();
         list.add(first);
@@ -625,7 +608,7 @@ public class Parser extends java_cup.runtime.lr_parser {
         return list;
     }
 
-    public static SymbolTable currentScope = new SymbolTable(null);
+
     private TypeNode.Kind auxSwitchType;
 
     public boolean isInt(TypeNode.Kind t) {
@@ -644,12 +627,15 @@ public class Parser extends java_cup.runtime.lr_parser {
         return (t == TypeNode.Kind.TUPLE);
     }
 
+    public static SymbolTable currentScope = new SymbolTable(null);
+
     public void openScope() {
         currentScope = new SymbolTable(currentScope);
     }
 
     public void closeScope() {
-        if(currentScope.getParent() != null) {
+        if (currentScope.getParent() != null) {
+            SymbolTable.registerClosedScope(currentScope);
             currentScope = currentScope.getParent();
         } else {
             ErrorManager.add(new CompilerError(CompilerError.TYPE.SEMANTIC,
@@ -666,7 +652,7 @@ public class Parser extends java_cup.runtime.lr_parser {
      * @param isConst Un booleà que indica si és una constant.
      */
      private void validateAndAddSymbol(ExprNode.VarNode var, TypeNode type, ExprNode assig, boolean isConst) {
-        Simbol s = new Simbol(var.getName(), type, isConst, var.line, var.column);
+        Simbol s = new Simbol(var.getName(), type, isConst, var.line, var.column, currentScope.getScopeId());
 
         if (isTuple(type.getKind())) {
             if (assig == null) {
@@ -755,7 +741,8 @@ class CUP$Parser$actions {
 		int iright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		List<InstrNode> i = (List<InstrNode>)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
-                RESULT = new ProgramNode(id, d, m, i, line(p), column(p));
+                RESULT = new ProgramNode(id, d, m, i, pleft, pright);
+                SymbolTable.registerClosedScope(currentScope);
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("program",0, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-6)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -833,7 +820,7 @@ class CUP$Parser$actions {
                 for(ExprNode.VarNode var : l) {
                     validateAndAddSymbol(var, t, e, true);
                 }
-                RESULT = new DeclNode(true, t, l, e, line(c), column(c));
+                RESULT = new DeclNode(true, t, l, e, t.line, t.column);
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("decl",5, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-4)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -884,13 +871,10 @@ class CUP$Parser$actions {
 		int aright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		List<ArgNode> a = (List<ArgNode>)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 
-                int lin = line(f);
-                int col = column(f);
-
-                Simbol s = new Simbol(id, t, false, Simbol.Methods.FUNCIO, lin, col, a);
+                Simbol s = new Simbol(id, t, false, Simbol.Methods.FUNCIO, fleft, fright, a, currentScope.getScopeId());
 
                 if (!currentScope.add(s)) {
-                    ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                         "Nom ja utilitzat: " + id));
                 }
 
@@ -899,10 +883,10 @@ class CUP$Parser$actions {
                 for (ArgNode arg : a) {
                     String name = arg.getVar().getName();
                     TypeNode type = arg.getType();
-                    Simbol sA = new Simbol(name, type, false, lin, col);
+                    Simbol sA = new Simbol(name, type, false, arg.line, arg.column, currentScope.getScopeId());
 
                     if(!currentScope.add(sA)) {
-                        ErrorManager.add(new CompilerError(arg.getVar().line, arg.getVar().column, CompilerError.TYPE.SEMANTIC,
+                        ErrorManager.add(new CompilerError(arg.line, arg.column, CompilerError.TYPE.SEMANTIC,
                                     "Argument ja declarat: " + name));
                     }
                 }
@@ -943,12 +927,12 @@ class CUP$Parser$actions {
 		ExprNode e = (ExprNode)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
                 if(!e.getKind().equals(t.getKind())) {
-                    ErrorManager.add(new CompilerError(line(dp), column(dp), CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
                                     "El tipus del retorn " + e.getKind() +
                                     " no coincideix amb el tipus de la funció: " + t.getKind()));
                 }
 
-                MethodNode m = new MethodNode(true, id, t, a, d, i, e, line(f), column(f));
+                MethodNode m = new MethodNode(true, id, t, a, d, i, e, fleft, fright);
                 closeScope();
 
                 RESULT = m;
@@ -971,12 +955,9 @@ class CUP$Parser$actions {
 		int aright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		List<ArgNode> a = (List<ArgNode>)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 
-                int lin = line(p);
-                int col = column(p);
-
-                Simbol s = new Simbol(id, null, false, Simbol.Methods.PROCEDIMENT, lin, col, a);
+                Simbol s = new Simbol(id, null, false, Simbol.Methods.PROCEDIMENT, pleft, pright, a, currentScope.getScopeId());
                 if (!currentScope.add(s)) {
-                    ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                         "Nom ja utilitzat: " + id));
                 }
 
@@ -985,10 +966,10 @@ class CUP$Parser$actions {
                 for (ArgNode arg : a) {
                     String name = arg.getVar().getName();
                     TypeNode type = arg.getType();
-                    Simbol sA = new Simbol(name, type, false, lin, col);
+                    Simbol sA = new Simbol(name, type, false, arg.line, arg.column, currentScope.getScopeId());
 
                     if(!currentScope.add(sA)) {
-                        ErrorManager.add(new CompilerError(arg.getVar().line, arg.getVar().column, CompilerError.TYPE.SEMANTIC,
+                        ErrorManager.add(new CompilerError(arg.line, arg.column, CompilerError.TYPE.SEMANTIC,
                                     "Argument ja declarat: " + name));
                     }
                 }
@@ -1019,7 +1000,7 @@ class CUP$Parser$actions {
 		int iright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		List<InstrNode> i = (List<InstrNode>)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
-                MethodNode m = new MethodNode(true, id, null, a, d, i, null, line(p), column(p));
+                MethodNode m = new MethodNode(true, id, null, a, d, i, null, pleft, pright);
                 closeScope();
 
                 RESULT = m;
@@ -1139,7 +1120,7 @@ class CUP$Parser$actions {
 		
                 Simbol s = currentScope.lookUp(id);
                 if (s == null) {
-                    ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                                         "Variable no declarada: " + id));
                 } else {
                     // Comprovar tipus
@@ -1151,13 +1132,13 @@ class CUP$Parser$actions {
 
                     // Comprovar constant
                     if (s.isConst()) {
-                        ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
+                        ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                             "No es pot assignar a una constant: " + id));
                     }
 
                     s.setInitialized(true);
 
-                    DeclNode d = new DeclNode(false, s.getType(), crearLlista(new ExprNode.VarNode(id)), e);
+                    DeclNode d = new DeclNode(false, s.getType(), crearLlista(new ExprNode.VarNode(id, idleft, idright)), e);
                     RESULT = new InstrNode.InstrDeclNode(d);
                 }
             
@@ -1193,17 +1174,14 @@ class CUP$Parser$actions {
 		int eright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		List<ExprNode> e = (List<ExprNode>)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
-                int lin = line(op);
-                int col = column(op);
-
-                InstrNode.CallNode c = new InstrNode.CallNode(id, e, lin, col);
+                InstrNode.CallNode c = new InstrNode.CallNode(id, e, idleft, idright);
 
                 Simbol s = currentScope.lookUp(id);
                 if (s == null) {
-                    ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                         "Mètode no declarat: " + id));
                 } else if (s.getMethodType() == Simbol.Methods.NONE) {
-                    ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                     id + " no és un mètode."));
                 } else {
                     List<ArgNode> params = s.getParams();
@@ -1211,7 +1189,7 @@ class CUP$Parser$actions {
                     if (params == null) params = new ArrayList<>();
 
                     if(params.size() != e.size()) {
-                        ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
+                        ErrorManager.add(new CompilerError(eleft, eright, CompilerError.TYPE.SEMANTIC,
                                                     "Nombre d'arguments incorrecte a la crida de " + id +
                                                     ": s'esperaven " + params.size() +
                                                     " i s'han passat " + e.size()));
@@ -1254,7 +1232,7 @@ class CUP$Parser$actions {
                 openScope();
 
                 if (!isBoolean(e.getKind())) {
-                    ErrorManager.add(new CompilerError(line(op), column(op), CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
                         "La condició del 'if' ha de ser de tipus booleà, trobat: " + e.getKind()));
                 }
             
@@ -1301,7 +1279,7 @@ class CUP$Parser$actions {
 		int oright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		List<InstrNode> o = (List<InstrNode>)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
-                RESULT = new CondNode.IfNode(e, i, o, line(op), column(op));
+                RESULT = new CondNode.IfNode(e, i, o, opleft, opright);
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("cond",10, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-9)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1320,7 +1298,7 @@ class CUP$Parser$actions {
 
                 Simbol s = currentScope.lookUp(id);
                 if (s == null) {
-                    ErrorManager.add(new CompilerError(line(op), column(op), CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                         "Variable no declarada al 'switch': " + id));
                 }
 
@@ -1352,7 +1330,7 @@ class CUP$Parser$actions {
 		List<InstrNode> i = (List<InstrNode>)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
                 closeScope();
-                RESULT = new CondNode.SwitchNode(id, c, i, line(op), column(op));
+                RESULT = new CondNode.SwitchNode(id, c, i, opleft, opright);
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("cond",10, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-8)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1445,11 +1423,11 @@ class CUP$Parser$actions {
                 TypeNode.Kind caseType = t.getKind();
 
                 if (auxSwitchType != TypeNode.Kind.UNKNOWN && auxSwitchType != caseType) {
-                    ErrorManager.add(new CompilerError(line(d), column(d), CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(t.line, t.column, CompilerError.TYPE.SEMANTIC,
                         "Tipus incompatible al 'case': esperat " + auxSwitchType + " però trobat " + caseType));
                 }
 
-                RESULT = new CondNode.SwitchNode.CaseNode(t, i, line(d), column(d));
+                RESULT = new CondNode.SwitchNode.CaseNode(t, i, t.line, t.column);
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("cas_opcio",11, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1468,7 +1446,7 @@ class CUP$Parser$actions {
 
                 if (!isBoolean(e.getKind())) {
                     ErrorManager.add(new CompilerError(
-                        line(w), column(w), CompilerError.TYPE.SEMANTIC,
+                        e.line, e.column, CompilerError.TYPE.SEMANTIC,
                         "La condició del 'while' ha de ser de tipus booleà, trobat: " + e.getKind()
                     ));
                 }
@@ -1497,7 +1475,7 @@ class CUP$Parser$actions {
 		
                 closeScope();
 
-                RESULT = new LoopNode.WhileNode(e, i, line(w), column(w));
+                RESULT = new LoopNode.WhileNode(e, i, wleft, wright);
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("loop",12, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-7)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1536,11 +1514,11 @@ class CUP$Parser$actions {
                 closeScope();
 
                 if(!isBoolean(e.getKind())) {
-                    ErrorManager.add(new CompilerError(line(d), column(d), CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
                         "La condició del 'do-while' ha de ser de tipus booleà, trobat: " + e.getKind()));
                 }
 
-                RESULT = new LoopNode.DoWhileNode(i, e, line(d), column(d));
+                RESULT = new LoopNode.DoWhileNode(i, e, dleft, dright);
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("loop",12, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-6)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1560,11 +1538,11 @@ class CUP$Parser$actions {
                 Simbol s = currentScope.lookUp(id);
 
                 if(s == null) {
-                    ErrorManager.add(new CompilerError(line(i), column(i), CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                         "Variable " + id + " no declarada"));
                 }
 
-                RESULT = new InstrNode.InputNode(id, line(i), column(i));
+                RESULT = new InstrNode.InputNode(id, ileft, iright);
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("entrada",7, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1581,7 +1559,7 @@ class CUP$Parser$actions {
 		int eright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		ExprNode e = (ExprNode)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
-                RESULT = new InstrNode.OutputNode(e, line(o), column(o));
+                RESULT = new InstrNode.OutputNode(e, oleft, oright);
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("sortida",8, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1595,7 +1573,7 @@ class CUP$Parser$actions {
 		int opright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Symbol op = (Symbol)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-                RESULT = new TypeNode(TypeNode.Kind.DOUBLE, line(op), column(op));
+                RESULT = new TypeNode(TypeNode.Kind.DOUBLE, opleft, opright);
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("tipus",14, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1609,7 +1587,7 @@ class CUP$Parser$actions {
 		int opright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Symbol op = (Symbol)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-                RESULT = new TypeNode(TypeNode.Kind.STRING, line(op), column(op));
+                RESULT = new TypeNode(TypeNode.Kind.STRING, opleft, opright);
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("tipus",14, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1623,7 +1601,7 @@ class CUP$Parser$actions {
 		int opright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Symbol op = (Symbol)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-                RESULT = new TypeNode(TypeNode.Kind.CHARACTER, line(op), column(op));
+                RESULT = new TypeNode(TypeNode.Kind.CHARACTER, opleft, opright);
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("tipus",14, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1637,7 +1615,7 @@ class CUP$Parser$actions {
 		int opright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Symbol op = (Symbol)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-                RESULT = new TypeNode(TypeNode.Kind.BOOLEAN, line(op), column(op));
+                RESULT = new TypeNode(TypeNode.Kind.BOOLEAN, opleft, opright);
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("tipus",14, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1651,7 +1629,7 @@ class CUP$Parser$actions {
 		int opright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Symbol op = (Symbol)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-                RESULT = new TypeNode(TypeNode.Kind.TUPLE, line(op), column(op));
+                RESULT = new TypeNode(TypeNode.Kind.TUPLE, opleft, opright);
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("tipus",14, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1668,7 +1646,7 @@ class CUP$Parser$actions {
 		int lright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		List<ExprNode.VarNode> l = (List<ExprNode.VarNode>)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-                RESULT = combinar(new ExprNode.VarNode(id), l);
+                RESULT = combinar(new ExprNode.VarNode(id, idleft, idright), l);
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("list_id",28, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1682,7 +1660,7 @@ class CUP$Parser$actions {
 		int idright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		String id = (String)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-                RESULT = crearLlista(new ExprNode.VarNode(id));
+                RESULT = crearLlista(new ExprNode.VarNode(id, idleft, idright));
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("list_id",28, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1741,7 +1719,7 @@ class CUP$Parser$actions {
 		int tright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		TypeNode t = (TypeNode)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-                RESULT = new ArgNode(new ExprNode.VarNode(id), t);
+                RESULT = new ArgNode(new ExprNode.VarNode(id, idleft, idright), t);
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("arg",22, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1801,15 +1779,13 @@ class CUP$Parser$actions {
 		ExprNode er = (ExprNode)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
                 ExprNode.BinaryOpNode bin = new ExprNode.BinaryOpNode(el, op, er);
-                int lin = bin.line;
-                int col = bin.column;
 
                 TypeNode.Kind t_left = el.getKind();
                 TypeNode.Kind t_right = er.getKind();
 
                 // Comprovació de tipus lògic
                 if (!isBoolean(t_left) || !isBoolean(t_right)) {
-                    ErrorManager.add(new CompilerError(lin, col,
+                    ErrorManager.add(new CompilerError(opleft, opright,
                         CompilerError.TYPE.SEMANTIC,
                         "Operació lògica només permesa entre booleans (" + t_left + " " + op + " " + t_right + ")"));
                     bin.setKind(TypeNode.Kind.BOOLEAN);
@@ -1852,8 +1828,6 @@ class CUP$Parser$actions {
 		ExprNode ea = (ExprNode)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
                 ExprNode.BinaryOpNode bin = new ExprNode.BinaryOpNode(er, op, ea);
-                int lin = bin.line;
-                int col = bin.column;
 
                 TypeNode.Kind t_left = er.getKind();
                 TypeNode.Kind t_right = ea.getKind();
@@ -1867,7 +1841,7 @@ class CUP$Parser$actions {
                         bin.setKind(TypeNode.Kind.BOOLEAN);
                     } else {
                         // Qualsevol altre tipus amb aquests operadors és error
-                        ErrorManager.add(new CompilerError(lin, col, CompilerError.TYPE.SEMANTIC,
+                        ErrorManager.add(new CompilerError(opleft, opright, CompilerError.TYPE.SEMANTIC,
                             "Operador relacional '" + op + "' només permès amb enters (" +
                             t_left + " " + op + " " + t_right + ")"));
                         bin.setKind(TypeNode.Kind.BOOLEAN); // permetre continuar parsing
@@ -1909,12 +1883,10 @@ class CUP$Parser$actions {
 		ExprNode t = (ExprNode)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
                 ExprNode.BinaryOpNode bin = new ExprNode.BinaryOpNode(ea, op, t);
-                int lin = bin.line;
-                int col = bin.column;
 
                 // Comprovació de tipus aritmètic
                 if (!isInt(ea.getKind()) || !isInt(t.getKind())) {
-                    ErrorManager.add(new CompilerError(lin, col,
+                    ErrorManager.add(new CompilerError(opleft, opright,
                         CompilerError.TYPE.SEMANTIC,
                         "Operació aritmètica només permesa entre enters (" + ea.getKind() + " " + op + " " + t.getKind() + ")"));
                     bin.setKind(TypeNode.Kind.DOUBLE); // per evitar propagació d'error
@@ -1981,14 +1953,14 @@ class CUP$Parser$actions {
 		int iright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		ExprNode i = (ExprNode)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-                ExprNode.VarNode var = new ExprNode.VarNode(id);
+                ExprNode.VarNode var = new ExprNode.VarNode(id, idleft, idright);
                 Simbol s = currentScope.lookUp(id);
 
                 if (s == null) {
-                    ErrorManager.add(new CompilerError(0, 0, CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                                     "Variable no declarada: " + id));
                 } else if (!isTuple(s.getType().getKind()) && i != null) {
-                    ErrorManager.add(new CompilerError(0, 0, CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(idleft, idright, CompilerError.TYPE.SEMANTIC,
                                     "La variable no és de tipus " + TypeNode.Kind.TUPLE + ", tipus trobat: " +
                                     s.getType().getKind()));
                 } else {
@@ -2086,7 +2058,7 @@ class CUP$Parser$actions {
 		int eright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		List<ExprNode> e = (List<ExprNode>)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
-                RESULT = new ExprNode.TupleNode(e, line(o), column(o));
+                RESULT = new ExprNode.TupleNode(e, oleft, oright);
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("terme",17, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2103,10 +2075,10 @@ class CUP$Parser$actions {
 		int eright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		ExprNode e = (ExprNode)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-                ExprNode.UnaryOpNode un = new ExprNode.UnaryOpNode("NOT", e, line(n), column(n));
+                ExprNode.UnaryOpNode un = new ExprNode.UnaryOpNode("NOT", e, nleft, nright);
 
                 if (!isBoolean(e.getKind())) {
-                    ErrorManager.add(new CompilerError(line(n), column(n),
+                    ErrorManager.add(new CompilerError(nleft, nright,
                                         CompilerError.TYPE.SEMANTIC,
                                         "L'operador 'NOT' només pot aplicar-se sobre valors booleans"));
                 }
@@ -2131,7 +2103,7 @@ class CUP$Parser$actions {
 		ExprNode e = (ExprNode)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
                 if(!isInt(e.getKind())) {
-                    ErrorManager.add(new CompilerError(line(o), column(o), CompilerError.TYPE.SEMANTIC,
+                    ErrorManager.add(new CompilerError(e.line, e.column, CompilerError.TYPE.SEMANTIC,
                     "Tipus incompatible de l'index, esperat " + TypeNode.Kind.DOUBLE + ", rebut: " + e.getKind()));
                 }
 

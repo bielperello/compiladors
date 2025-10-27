@@ -63,22 +63,20 @@ comentari = ##.*
         }
     }
 
-    /**
-     Construcció d'un symbol sense atribut associat.
-     **/
-    private ComplexSymbol symbol(int type) {
-        return new ComplexSymbol(ParserSym.terminalNames[type], type,
-            new ComplexSymbolFactory.Location(yyline + 1, yycolumn + 1),
-            new ComplexSymbolFactory.Location(yyline + 1, yycolumn + yylength()));
+    /** Sense atribut associat */
+    private Symbol symbol(int type) {
+        Symbol s = new Symbol(type);
+        s.left = yyline + 1;        // línia (1-based)
+        s.right = yycolumn + 1;     // columna (1-based)
+        return s;
     }
 
-    /**
-     Construcció d'un symbol amb un atribut associat.
-     **/
+    /** Amb atribut associat */
     private Symbol symbol(int type, Object value) {
-        return new ComplexSymbol(ParserSym.terminalNames[type], type,
-           new ComplexSymbolFactory.Location(yyline + 1, yycolumn + 1),
-           new ComplexSymbolFactory.Location(yyline + 1, yycolumn + yylength()), value);
+        Symbol s = new Symbol(type, value);
+        s.left = yyline + 1;
+        s.right = yycolumn + 1;
+        return s;
     }
 %}
 

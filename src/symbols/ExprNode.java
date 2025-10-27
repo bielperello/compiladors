@@ -77,12 +77,16 @@ public abstract class ExprNode extends Node {
             super(line, column);
             this.name = name;
             this.index = index;
+            this.line = line;
+            this.column = column;
         }
 
-        public VarNode(String name) {
+        public VarNode(String name, int line, int column) {
             super(Integer.MAX_VALUE, Integer.MAX_VALUE);
             this.name = name;
             this.index = null;
+            this.line = line;
+            this.column = column;
         }
 
         public void setIndex(ExprNode i) { this.index = i ; }

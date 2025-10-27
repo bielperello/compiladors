@@ -1,26 +1,29 @@
 package symbols;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class SymbolTable {
-    private Map<String, Simbol> symbols = new HashMap<>();
+    private Map<String, Simbol> symbols;
     private SymbolTable parent;
 
+    private int scopeId;
+    private static int nextId = 0;
+
+    private static List<SymbolTable> allTables = new ArrayList<>();
+
     public SymbolTable(SymbolTable parent) {
+        this.symbols = new HashMap<>();
         this.parent = parent;
+        this.scopeId = nextId++;
     }
 
-    public boolean add(Simbol symbol) {
-        if(symbols.containsKey(symbol.getName())) {
-            return false;
-        }
+    public int getScopeId() { return this.scopeId; }
+    public SymbolTable getParent() { return this.parent; }
+    public Map<String, Simbol> getSymbols() { return this.symbols; }
 
-        symbols.put(symbol.getName(), symbol);
-
-        System.out.println("Symbol " + symbol.getName() + " added to " + this);
-
+    public boolean add(Simbol s) {
+        if (symbols.containsKey(s.getName())) return false;
+        symbols.put(s.getName(), s);
         return true;
     }
 
@@ -28,19 +31,19 @@ public class SymbolTable {
         Simbol s = symbols.get(name);
         if (s != null) return s;
         if (parent != null) return parent.lookUp(name);
-
         return null;
     }
 
-    public Simbol lookUpLocal(String name) {
-        return symbols.get(name);
+    public static void registerClosedScope(SymbolTable table) {
+        allTables.add(table);
     }
 
-    public SymbolTable getParent() {
-        return parent;
+    public static List<SymbolTable> getAllTables() {
+        return allTables;
     }
 
-    public Collection<Simbol> getSymbols() {
-        return symbols.values();
+    public static void reset() {
+        allTables.clear();
+        nextId = 0;
     }
 }

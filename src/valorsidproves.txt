@@ -11,6 +11,6 @@ principal programa1 :
         fmentre
     fiprocediment
 
-    tupla f := [4, 5]
-    tupla x := f
+    tupla far := [4, 5]
+    tupla x := y
 fprincipal

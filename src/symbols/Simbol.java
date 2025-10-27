@@ -17,10 +17,12 @@ public class Simbol {
     private final int line;
     private final int column;
 
+    private int scopeId;
+
     private List<ExprNode> tupleCamps;
     private List<ArgNode> paramTypes;
 
-    public Simbol(String name, TypeNode type, boolean isConst, int line, int column) {
+    public Simbol(String name, TypeNode type, boolean isConst, int line, int column, int sID) {
         this.name = name;
         this.type = type;
         this.isConst = isConst;
@@ -28,11 +30,12 @@ public class Simbol {
         this.line = line;
         this.column = column;
         this.paramTypes = null;
+        this.scopeId = sID;
     }
 
     // Funcions / Procediments
     public Simbol(String name, TypeNode type, boolean isConst, Methods method,
-                  int line, int column, List<ArgNode> paramTypes) {
+                  int line, int column, List<ArgNode> paramTypes, int sID) {
         this.name = name;
         this.type = type;
         this.isConst = isConst;
@@ -40,6 +43,7 @@ public class Simbol {
         this.line = line;
         this.column = column;
         this.paramTypes = paramTypes;
+        this.scopeId = sID;
     }
 
     public String getName() {
