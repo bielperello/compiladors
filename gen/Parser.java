@@ -682,6 +682,78 @@ public class Parser extends java_cup.runtime.lr_parser {
         }
      }
 
+     private void processArguments(List<ArgNode> args) {
+         for (ArgNode arg : args) {
+             String name = arg.getVar().getName();
+             TypeNode type = arg.getType();
+
+             Simbol sA = new Simbol(name, type, Simbol.STIPUS.VARIABLE,
+                                    arg.line, arg.column, currentScope.getScopeId());
+
+             if (!currentScope.add(sA)) {
+                 ErrorManager.add(new CompilerError(arg.line, arg.column, CompilerError.TYPE.SEMANTIC,
+                             "Argument ja declarat: " + name));
+             }
+         }
+     }
+
+     private ExprNode.BinaryOpNode buildBinaryOp(ExprNode left, String op, ExprNode right, int line, int column) {
+         ExprNode.BinaryOpNode bin = new ExprNode.BinaryOpNode(left, op, right);
+
+         TypeNode.Kind tLeft = left.getKind();
+         TypeNode.Kind tRight = right.getKind();
+         TypeNode.Kind resultKind = TypeNode.Kind.UNKNOWN;
+
+         switch (op) {
+             // --- Operadors lògics ---
+             case "i":
+             case "o":
+                 if (!isBoolean(tLeft) || !isBoolean(tRight)) {
+                     ErrorManager.add(new CompilerError(line, column, CompilerError.TYPE.SEMANTIC,
+                             "Operació lògica només permesa entre booleans (" + tLeft + " " + op + " " + tRight + ")"));
+                 }
+                 resultKind = TypeNode.Kind.BOOLEAN;
+                 break;
+
+             // --- Operadors relacionals ---
+             case "==":
+             case "!=":
+                 resultKind = TypeNode.Kind.BOOLEAN;
+                 break;
+             case "<":
+             case "<=":
+             case ">":
+             case ">=":
+                 if (!isInt(tLeft) || !isInt(tRight)) {
+                     ErrorManager.add(new CompilerError(line, column, CompilerError.TYPE.SEMANTIC,
+                             "Operador relacional '" + op + "' només permès amb enters (" +
+                             tLeft + " " + op + " " + tRight + ")"));
+                 }
+                 resultKind = TypeNode.Kind.BOOLEAN;
+                 break;
+
+             // --- Operadors aritmètics ---
+             case "+":
+             case "-":
+             case "*":
+             case "/":
+                 if (!isInt(tLeft) || !isInt(tRight)) {
+                     ErrorManager.add(new CompilerError(line, column, CompilerError.TYPE.SEMANTIC,
+                             "Operació aritmètica només permesa entre enters (" +
+                             tLeft + " " + op + " " + tRight + ")"));
+                 }
+                 resultKind = TypeNode.Kind.DOUBLE;
+                 break;
+
+             default:
+                 ErrorManager.add(new CompilerError(line, column, CompilerError.TYPE.SEMANTIC,
+                         "Operador desconegut: " + op));
+         }
+
+         bin.setKind(resultKind);
+         return bin;
+     }
+
 
 /** Cup generated class to encapsulate user supplied action code.*/
 @SuppressWarnings({"rawtypes", "unchecked", "unused"})
@@ -879,17 +951,7 @@ class CUP$Parser$actions {
                 }
 
                 openScope();
-
-                for (ArgNode arg : a) {
-                    String name = arg.getVar().getName();
-                    TypeNode type = arg.getType();
-                    Simbol sA = new Simbol(name, type, Simbol.STIPUS.VARIABLE, arg.line, arg.column, currentScope.getScopeId());
-
-                    if(!currentScope.add(sA)) {
-                        ErrorManager.add(new CompilerError(arg.line, arg.column, CompilerError.TYPE.SEMANTIC,
-                                    "Argument ja declarat: " + name));
-                    }
-                }
+                processArguments(a);
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("NT$0",31, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -956,17 +1018,7 @@ class CUP$Parser$actions {
                 }
 
                 openScope();
-
-                for (ArgNode arg : a) {
-                    String name = arg.getVar().getName();
-                    TypeNode type = arg.getType();
-                    Simbol sA = new Simbol(name, type, Simbol.STIPUS.VARIABLE, arg.line, arg.column, currentScope.getScopeId());
-
-                    if(!currentScope.add(sA)) {
-                        ErrorManager.add(new CompilerError(arg.line, arg.column, CompilerError.TYPE.SEMANTIC,
-                                    "Argument ja declarat: " + name));
-                    }
-                }
+                processArguments(a);
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("NT$1",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1780,22 +1832,7 @@ class CUP$Parser$actions {
 		int erright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		ExprNode er = (ExprNode)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-                ExprNode.BinaryOpNode bin = new ExprNode.BinaryOpNode(el, op, er);
-
-                TypeNode.Kind t_left = el.getKind();
-                TypeNode.Kind t_right = er.getKind();
-
-                // Comprovació de tipus lògic
-                if (!isBoolean(t_left) || !isBoolean(t_right)) {
-                    ErrorManager.add(new CompilerError(opleft, opright,
-                        CompilerError.TYPE.SEMANTIC,
-                        "Operació lògica només permesa entre booleans (" + t_left + " " + op + " " + t_right + ")"));
-                    bin.setKind(TypeNode.Kind.BOOLEAN);
-                } else {
-                    bin.setKind(TypeNode.Kind.BOOLEAN);
-                }
-
-                RESULT = bin;
+                RESULT = buildBinaryOp(el, op, er, opleft, opright);
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expr_logic",19, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1829,28 +1866,7 @@ class CUP$Parser$actions {
 		int earight = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		ExprNode ea = (ExprNode)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-                ExprNode.BinaryOpNode bin = new ExprNode.BinaryOpNode(er, op, ea);
-
-                TypeNode.Kind t_left = er.getKind();
-                TypeNode.Kind t_right = ea.getKind();
-
-                if (op.equals("==") || op.equals("!=")) {
-                    // == i != per tots els literals
-                    bin.setKind(TypeNode.Kind.BOOLEAN);
-                } else {
-                    // <, <=, >, >= només amb enters
-                    if (isInt(t_left) && isInt(t_right)) {
-                        bin.setKind(TypeNode.Kind.BOOLEAN);
-                    } else {
-                        // Qualsevol altre tipus amb aquests operadors és error
-                        ErrorManager.add(new CompilerError(opleft, opright, CompilerError.TYPE.SEMANTIC,
-                            "Operador relacional '" + op + "' només permès amb enters (" +
-                            t_left + " " + op + " " + t_right + ")"));
-                        bin.setKind(TypeNode.Kind.BOOLEAN); // permetre continuar parsing
-                    }
-                }
-
-                RESULT = bin;
+                RESULT = buildBinaryOp(er, op, ea, opleft, opright);
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expr_rel",20, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1884,19 +1900,7 @@ class CUP$Parser$actions {
 		int tright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		ExprNode t = (ExprNode)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-                ExprNode.BinaryOpNode bin = new ExprNode.BinaryOpNode(ea, op, t);
-
-                // Comprovació de tipus aritmètic
-                if (!isInt(ea.getKind()) || !isInt(t.getKind())) {
-                    ErrorManager.add(new CompilerError(opleft, opright,
-                        CompilerError.TYPE.SEMANTIC,
-                        "Operació aritmètica només permesa entre enters (" + ea.getKind() + " " + op + " " + t.getKind() + ")"));
-                    bin.setKind(TypeNode.Kind.DOUBLE); // per evitar propagació d'error
-                } else {
-                    bin.setKind(TypeNode.Kind.DOUBLE);
-                }
-
-                RESULT = bin;
+                RESULT = buildBinaryOp(ea, op, t, opleft, opright);
             
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expr_arit",21, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
