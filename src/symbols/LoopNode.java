@@ -8,14 +8,17 @@ public abstract class LoopNode extends InstrNode {
     }
 
     public static class WhileNode extends LoopNode {
-        public ExprNode condition;
-        public List<InstrNode> body;
+        private ExprNode condition;
+        private List<InstrNode> body;
 
         public WhileNode(ExprNode condition, List<InstrNode> body, int line, int column) {
             super(line, column);
             this.condition = condition;
             this.body = body;
         }
+
+        public ExprNode getCondition() { return this.condition; }
+        public List<InstrNode> getBody() { return this.body; }
 
         @Override
         public void generateCode() {
@@ -32,6 +35,9 @@ public abstract class LoopNode extends InstrNode {
             this.condition = condition;
             this.body = body;
         }
+
+        public ExprNode getCondition() { return this.condition; }
+        public List<InstrNode> getBody() { return this.body; }
 
         @Override
         public void generateCode() {

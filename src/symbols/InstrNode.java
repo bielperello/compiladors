@@ -16,14 +16,17 @@ public abstract class InstrNode extends Node {
     // ------------------------
 
     public static class CallNode extends InstrNode {
-        public String functionName;
-        public List<ExprNode> expr;
+        private String functionName;
+        private List<ExprNode> expr;
 
         public CallNode(String functionName, List<ExprNode> expr, int line, int column) {
             super(line, column);
             this.functionName = functionName;
             this.expr = expr;
         }
+
+        public String getFunctionName() { return this.functionName; }
+        public List<ExprNode> getExpr() { return this.expr; }
 
         @Override
         public void generateCode() {
@@ -37,12 +40,14 @@ public abstract class InstrNode extends Node {
     }
 
     public static class InputNode extends InstrNode {
-        public String id;
+        private final String id;
 
         public InputNode(String id, int line, int column) {
             super(line, column);
             this.id = id;
         }
+
+        public String getId() { return this.id; }
 
         @Override
         public void generateCode() {
@@ -51,12 +56,14 @@ public abstract class InstrNode extends Node {
     }
 
     public static class OutputNode extends InstrNode {
-        public ExprNode expr;
+        private final ExprNode expr;
 
         public OutputNode(ExprNode expr, int line, int column) {
             super(line, column);
             this.expr = expr;
         }
+
+        public ExprNode getExpr() { return this.expr; }
 
         @Override
         public void generateCode() {
@@ -74,6 +81,9 @@ public abstract class InstrNode extends Node {
             this.expr = expr;
         }
 
+        public ExprNode.VarNode getId() { return this.id; }
+        public ExprNode getExpr() { return this.expr; }
+
         @Override
         public void generateCode() {}
     }
@@ -86,6 +96,7 @@ public abstract class InstrNode extends Node {
             this.decl = decl;
         }
 
+        public DeclNode getDecl() {return this.decl; }
         @Override
         public void generateCode() {
             decl.generateCode();

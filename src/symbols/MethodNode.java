@@ -38,7 +38,7 @@ public class MethodNode extends Node {
 
     public boolean isFunction() { return isFunction; }
     public String getName() { return name; }
-    public TypeNode getReturnType() { return returnType; }
+    public TypeNode getType() { return returnType; }
     public List<ArgNode> getParams() { return params; }
     public List<InstrNode> getInstrs() { return instrs; }
     public ExprNode getReturnExpr() { return returnExpr; }
