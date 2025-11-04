@@ -1,13 +1,13 @@
-package symbols;
+package nodes;
 
 public class TypeNode extends Node {
     public enum Kind {
-        INTEGER, DOUBLE, STRING, CHARACTER, BOOLEAN,
-        TUPLE, ARRAY, VOID, UNKNOWN
+        INTEGER, DOUBLE, ENTER, CADENA, CARACTER, LOGIC,
+        TUPLA, ARRAY, VOID, USER, UNKNOWN
     }
 
     private final Kind kind;
-    private final String customTypeName; // per tipus definits per l’usuari (com 'Persona')
+    private final String customTypeName;
 
     public TypeNode(Kind kind, int line, int column) {
         this(kind, null, line, column);
@@ -24,9 +24,16 @@ public class TypeNode extends Node {
     }
 
     public String getType() { return kind.toString(); }
-
     public String getCustomTypeName() {
         return customTypeName;
+    }
+
+    public boolean isUserDefined() {
+        return kind == Kind.USER || customTypeName != null;
+    }
+
+    public String getLookupName() {
+        return customTypeName != null ? customTypeName : kind.name().toLowerCase();
     }
 
     @Override

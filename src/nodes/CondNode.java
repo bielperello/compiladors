@@ -1,6 +1,4 @@
-package symbols;
-
-import java_cup.runtime.Symbol;
+package nodes;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,19 +30,19 @@ public abstract class CondNode extends InstrNode {
     }
 
     public static class SwitchNode extends CondNode {
-        private final String id;
+        private final ExprNode expr;
         private final List<CaseNode> cases;
         private final List<InstrNode> defaultInstrs;
 
-        public SwitchNode(String id, List<CaseNode> cases, List<InstrNode> defaultInstrs,
+        public SwitchNode(ExprNode expr, List<CaseNode> cases, List<InstrNode> defaultInstrs,
                           int line, int column) {
             super(line, column);
-            this.id = id;
+            this.expr = expr;
             this.cases = cases != null ? cases : new ArrayList<>();
             this.defaultInstrs = defaultInstrs;
         }
 
-        public String getId() { return this.id; }
+        public ExprNode getExpr() { return this.expr; }
         public List<CaseNode> getCases() { return this.cases; }
         public List<InstrNode> getDefaultInstrs() { return this.defaultInstrs; }
 

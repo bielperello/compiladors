@@ -1,16 +1,4 @@
-principal programa1 :
-    funcio enter primera (y: enter) :
-        enter x := 4
-        tornar x + y
-    fifuncio
-
-    procediment proc1():
-        mentre ( 4 != 4 ) fer
-            enter x := 2
-            x := x + 2
-        fmentre
-    fiprocediment
-
-    tupla far := [4, 5]
-    tupla x := y
+principal prova1 :
+    enter x =
+    logic y := cert
 fprincipal

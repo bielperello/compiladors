@@ -192,13 +192,12 @@ comentari = ##.*
 {nombre}             { return symbol(ParserSym.ENTER, Double.parseDouble(this.yytext())); }
 
 // ERROR
-.                    {
-           // Qualsevol caràcter no reconegut arriba aquí
-          ErrorManager.add(new CompilerError(
-              yyline + 1, yycolumn + 1,
-              CompilerError.TYPE.LEXIC,
-              "Símbol desconegut: '" + yytext() + "'"
-          ));
-          // Pots retornar null o ignorar-lo segons la teva estratègia
-          return null;
-      }
+. {
+    ErrorManager.add(new CompilerError(
+        yyline + 1, yycolumn + 1,
+        CompilerError.TYPE.LEXIC,
+        "Símbol desconegut: '" + yytext() + "'"
+    ));
+
+    return symbol(ParserSym.ERROR, yytext());
+}

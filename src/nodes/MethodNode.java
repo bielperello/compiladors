@@ -1,4 +1,4 @@
-package symbols;
+package nodes;
 
 import java.util.Collections;
 import java.util.List;
@@ -10,10 +10,10 @@ public class MethodNode extends Node {
 
     private final boolean isFunction;
     private final String name;
-    private final TypeNode returnType; // null si és procediment
+    private final TypeNode returnType;
     private final List<ArgNode> params;
     private final List<InstrNode> instrs;
-    private final ExprNode returnExpr; // només si és funció
+    private final ExprNode returnExpr;
 
     public MethodNode(boolean isFunction,
                       String name,

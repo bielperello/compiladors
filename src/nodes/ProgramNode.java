@@ -1,4 +1,4 @@
-package symbols;
+package nodes;
 
 import java.util.Collections;
 import java.util.List;

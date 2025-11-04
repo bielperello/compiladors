@@ -1,7 +1,8 @@
-package symbols;
+package nodes;
 
-import java_cup.runtime.Symbol;
+import simbols.descripcio.DescripcioTipus;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public abstract class InstrNode extends Node {
@@ -18,15 +19,21 @@ public abstract class InstrNode extends Node {
     public static class CallNode extends InstrNode {
         private String functionName;
         private List<ExprNode> expr;
+        private DescripcioTipus retornTipus;
 
         public CallNode(String functionName, List<ExprNode> expr, int line, int column) {
             super(line, column);
             this.functionName = functionName;
-            this.expr = expr;
+            this.expr = expr != null ? expr : new ArrayList<>();
         }
 
         public String getFunctionName() { return this.functionName; }
         public List<ExprNode> getExpr() { return this.expr; }
+        public DescripcioTipus getRetornTipus() { return this.retornTipus; }
+
+        public void setRetornTipus(DescripcioTipus retornTipus) {
+            this.retornTipus = retornTipus;
+        }
 
         @Override
         public void generateCode() {
@@ -40,19 +47,17 @@ public abstract class InstrNode extends Node {
     }
 
     public static class InputNode extends InstrNode {
-        private final String id;
+        private final RefNode ref;
 
-        public InputNode(String id, int line, int column) {
+        public InputNode(RefNode ref, int line, int column) {
             super(line, column);
-            this.id = id;
+            this.ref = ref;
         }
 
-        public String getId() { return this.id; }
+        public RefNode getRef() { return this.ref; }
 
         @Override
-        public void generateCode() {
-            System.out.println("input(" + id + ");");
-        }
+        public void generateCode() {}
     }
 
     public static class OutputNode extends InstrNode {
@@ -72,16 +77,16 @@ public abstract class InstrNode extends Node {
     }
 
     public static class AssignNode extends InstrNode {
-        private final ExprNode.VarNode id;
+        private final RefNode ref;
         private final ExprNode expr;
 
-        public AssignNode(ExprNode.VarNode id, ExprNode expr, int line, int column) {
+        public AssignNode(RefNode ref, ExprNode expr, int line, int column) {
             super(line, column);
-            this.id = id;
+            this.ref = ref;
             this.expr = expr;
         }
 
-        public ExprNode.VarNode getId() { return this.id; }
+        public RefNode getRef() { return this.ref; }
         public ExprNode getExpr() { return this.expr; }
 
         @Override

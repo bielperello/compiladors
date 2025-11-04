@@ -1,7 +1,7 @@
 import java.io.FileReader;
 import java_cup.runtime.Symbol;
 import errors.*;
-import symbols.*;
+import nodes.*;
 
 public class Main {
     public static void main(String[] args) throws Exception {
@@ -20,11 +20,11 @@ public class Main {
 
                 ErrorManager.printErrors();
             } else {
-                System.out.println("S'han detectat errors lèxics o sintàctics, s'atura l'anàlisi semàntica.");
+                System.out.println("S'han detectat errors lèxics o sintàctics, s'atura l'anàlisi.");
             }
 
         } catch (Exception e) {
-            System.err.println("Error greu: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }

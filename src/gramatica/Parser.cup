@@ -7,11 +7,11 @@
  * Professor: Pere Palmer
  *
  * Generar:
- * java -jar java-cup-11b.jar -expect 16 -parser Parser -symbols ParserSym -destdir gen src/gramatica/Parser.cup
+ * java -jar java-cup-11b.jar -expect 16 -parser Parser -nodes ParserSym -destdir gen src/gramatica/Parser.cup
  */
 import java_cup.runtime.*;
 import java_cup.runtime.ComplexSymbolFactory.ComplexSymbol;
-import symbols.*;
+import nodes.*;
 import errors.*;
 import java.util.*;
 
@@ -29,6 +29,29 @@ parser code {:
         List<T> list = new ArrayList<>();
         list.add(item);
         return list;
+    }
+
+    @Override
+    public void report_error(String message, Object info) {
+        Symbol s = (Symbol) info;
+        int line = (s != null) ? (s.left + 1) : -1;
+        int column = (s != null) ? (s.right + 1) : -1;
+        String text = (s != null && s.value != null) ? s.value.toString() : "";
+        ErrorManager.add(new CompilerError(
+            line, column, CompilerError.TYPE.SINTACTIC,
+            "Error sintàctic prop de '" + text + "': " + message
+        ));
+    }
+
+    @Override
+    public void syntax_error(Symbol s) {
+        int line = (s != null) ? s.left : -1;
+        int column = (s != null) ? s.right : -1;
+        String text = (s != null && s.value != null) ? s.value.toString() : "";
+        ErrorManager.add(new CompilerError(
+            line, column, CompilerError.TYPE.SINTACTIC,
+            "Error de sintaxi: token inesperat '" + text + "'"
+        ));
     }
 :}
 
@@ -66,11 +89,11 @@ non terminal MethodNode method;
 non terminal TypeNode tipus;
 non terminal ExprNode assig, expr, terme, index_opt;
 non terminal ExprNode expr_logic, expr_rel, expr_arit;
+non terminal RefNode ref;
 non terminal ArgNode arg;
 non terminal List<ArgNode> args;
 non terminal List<CondNode.SwitchNode.CaseNode> cas_opcions;
 non terminal String op_arit, op_rel, op_log;
-non terminal List<ExprNode.VarNode> list_id;
 non terminal List<ExprNode> expr_list;
 non terminal InstrNode.AssignNode assign_instr;
 
@@ -93,18 +116,34 @@ program ::= PRINCIPAL:p ID:id DOS_PUNTS decls:d methods:m instrs:i ENDPRINCIPAL
 
 decls ::= decl:d decls:ds
             {: RESULT = combinar(d, ds); :}
+        | error:e decls:ds
+            {:
+                ErrorManager.add(new CompilerError(
+                    eleft, eright, CompilerError.TYPE.SINTACTIC,
+                    "Error sintàctic: declaració ignorada."
+                ));
+                RESULT = ds;
+            :}
         | /* buit */
             {: RESULT = new ArrayList<DeclNode>(); :}
 ;
 
-decl ::= tipus:t list_id:l assig:a
-            {: RESULT = new DeclNode(t, l, a, false, t.line, t.column); :}
-        | CONST:c tipus:t list_id:l ASSIGNACIO expr:e
-            {: RESULT = new DeclNode(t, l, e, true, t.line, t.column); :}
+decl ::= tipus:t ID:id assig:a
+            {: RESULT = new DeclNode(t, id, a, false, t.line, t.column); :}
+        | CONST:c tipus:t ID:id ASSIGNACIO expr:e
+            {: RESULT = new DeclNode(t, id, e, true, t.line, t.column); :}
 ;
 
 methods ::= method:m methods:ms
             {: RESULT = combinar(m, ms); :}
+        | error:e methods:ds
+            {:
+                ErrorManager.add(new CompilerError(
+                    eleft, eright, CompilerError.TYPE.SINTACTIC,
+                    "Error sintàctic: subprograma ignorat."
+                ));
+                RESULT = ds;
+            :}
         | /* buit */
             {: RESULT = new ArrayList<MethodNode>(); :}
 ;
@@ -118,6 +157,14 @@ method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS instrs:i TOR
 
 instrs ::= instr:i instrs:is
             {: RESULT = combinar(i, is); :}
+        | error:e instrs:ds
+                {:
+                    ErrorManager.add(new CompilerError(
+                        eleft, eright, CompilerError.TYPE.SINTACTIC,
+                        "Error sintàctic: instrucció ignorada."
+                    ));
+                    RESULT = ds;
+                :}
         | /* buit */
             {: RESULT = new ArrayList<InstrNode>(); :}
 ;
@@ -138,8 +185,8 @@ instr ::= call:c
             {: RESULT = new InstrNode.InstrDeclNode(d); :}
 ;
 
-assign_instr ::= ID:id ASSIGNACIO expr:e
-            {: RESULT = new InstrNode.AssignNode((new ExprNode.VarNode(id, idleft, idright)), e, idleft, idright); :}
+assign_instr ::= ref:r ASSIGNACIO expr:e
+            {: RESULT = new InstrNode.AssignNode(r, e, rleft, rright); :}
 ;
 
 call ::= ID:id OBR_PAR:op expr_list:e TANC_PAR
@@ -148,8 +195,8 @@ call ::= ID:id OBR_PAR:op expr_list:e TANC_PAR
 
 cond ::= OP_IF:op OBR_PAR expr:e TANC_PAR OP_THEN instrs:i optional_cond:o OP_ENDIF
             {: RESULT = new CondNode.IfNode(e, i, o, opleft, opright); :}
-        | OP_SWITCH:op ID:id DOS_PUNTS cas_opcions:c DEFAULT_SWITCH DOS_PUNTS instrs:i OP_ENDSWITCH
-            {: RESULT = new CondNode.SwitchNode(id, c, i, opleft, opright); :}
+        | OP_SWITCH:op expr:e DOS_PUNTS cas_opcions:c DEFAULT_SWITCH DOS_PUNTS instrs:i OP_ENDSWITCH
+            {: RESULT = new CondNode.SwitchNode(e, c, i, opleft, opright); :}
 ;
 
 optional_cond ::= OP_ELSE instrs:i
@@ -174,8 +221,8 @@ loop ::= OP_WHILE:w OBR_PAR expr:e TANC_PAR OP_DO instrs:i OP_ENDWHILE
             {: RESULT = new LoopNode.DoWhileNode(i, e, dleft, dright); :}
 ;
 
-entrada ::= INPUT:i OBR_PAR ID:id TANC_PAR
-            {: RESULT = new InstrNode.InputNode(id, ileft, iright); :}
+entrada ::= INPUT:i OBR_PAR ref:r TANC_PAR
+            {: RESULT = new InstrNode.InputNode(r, ileft, iright); :}
 ;
 
 sortida ::= OUTPUT:o OBR_PAR expr:e TANC_PAR
@@ -183,21 +230,17 @@ sortida ::= OUTPUT:o OBR_PAR expr:e TANC_PAR
 ;
 
 tipus ::= OP_TIPUS_ENTER:op
-            {: RESULT = new TypeNode(TypeNode.Kind.DOUBLE, opleft, opright); :}
+            {: RESULT = new TypeNode(TypeNode.Kind.ENTER, opleft, opright); :}
         | OP_TIPUS_CADENA:op
-            {: RESULT = new TypeNode(TypeNode.Kind.STRING, opleft, opright); :}
+            {: RESULT = new TypeNode(TypeNode.Kind.CADENA, opleft, opright); :}
         | OP_TIPUS_CARACTER:op
-            {: RESULT = new TypeNode(TypeNode.Kind.CHARACTER, opleft, opright); :}
+            {: RESULT = new TypeNode(TypeNode.Kind.CARACTER, opleft, opright); :}
         | OP_TIPUS_LOGIC:op
-            {: RESULT = new TypeNode(TypeNode.Kind.BOOLEAN, opleft, opright); :}
+            {: RESULT = new TypeNode(TypeNode.Kind.LOGIC, opleft, opright); :}
         | OP_TIPUS_TUPLA:op
-            {: RESULT = new TypeNode(TypeNode.Kind.TUPLE, opleft, opright); :}
-;
-
-list_id ::= ID:id COMA list_id:l
-            {: RESULT = combinar(new ExprNode.VarNode(id, idleft, idright), l); :}
+            {: RESULT = new TypeNode(TypeNode.Kind.TUPLA, opleft, opright); :}
         | ID:id
-            {: RESULT = crearLlista(new ExprNode.VarNode(id, idleft, idright)); :}
+            {: RESULT = new TypeNode(TypeNode.Kind.USER, id, idleft, idright); :}
 ;
 
 args ::= arg:a COMA args:as
@@ -209,7 +252,7 @@ args ::= arg:a COMA args:as
 ;
 
 arg ::= ID:id DOS_PUNTS tipus:t
-            {: RESULT = new ArgNode(new ExprNode.VarNode(id, idleft, idright), t); :}
+            {: RESULT = new ArgNode(id, t); :}
 ;
 
 assig ::= ASSIGNACIO expr:e
@@ -244,8 +287,8 @@ terme ::= VALOR_LOGIC:vl
             {: RESULT = new ExprNode.LiteralNode(vl, vlleft, vlright); :}
         | ENTER:e
             {: RESULT = new ExprNode.LiteralNode(e, eleft, eright); :}
-        | ID:id index_opt:i
-            {: RESULT = new ExprNode.VarNode(id, i, idleft, idright); :}
+        | ref:r
+            {: RESULT = r; :}
         | CADENA:c
             {: RESULT = new ExprNode.LiteralNode(c, cleft, cright); :}
         | CARACTER:c
@@ -258,6 +301,10 @@ terme ::= VALOR_LOGIC:vl
             {: RESULT = new ExprNode.TupleNode(e, oleft, oright); :}
         | NOT:n expr:e
             {: RESULT = new ExprNode.UnaryOpNode("NOT", e, nleft, nright); :}
+;
+
+ref ::= ID:id index_opt:i
+            {: RESULT = new RefNode(id, i, idleft, idright); :}
 ;
 
 index_opt ::= OBR_CORX:o expr:e TANC_CORX

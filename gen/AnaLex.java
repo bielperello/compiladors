@@ -917,14 +917,13 @@ public class AnaLex implements java_cup.runtime.Scanner {
       else {
         switch (zzAction < 0 ? zzAction : ZZ_ACTION[zzAction]) {
           case 1:
-            { // Qualsevol caràcter no reconegut arriba aquí
-          ErrorManager.add(new CompilerError(
-              yyline + 1, yycolumn + 1,
-              CompilerError.TYPE.LEXIC,
-              "Símbol desconegut: '" + yytext() + "'"
-          ));
-          // Pots retornar null o ignorar-lo segons la teva estratègia
-          return null;
+            { ErrorManager.add(new CompilerError(
+        yyline + 1, yycolumn + 1,
+        CompilerError.TYPE.LEXIC,
+        "Símbol desconegut: '" + yytext() + "'"
+    ));
+
+    return symbol(ParserSym.ERROR, yytext());
             }
           // fall through
           case 46: break;

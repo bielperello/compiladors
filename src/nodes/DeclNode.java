@@ -1,18 +1,18 @@
-package symbols;
+package nodes;
 
 import java.util.List;
 
 public class DeclNode extends Node {
     private final TypeNode type;
-    private final List<ExprNode.VarNode> ids;
+    private final String id;
     private final ExprNode expr;
     private final boolean isConst;
 
-    public DeclNode(TypeNode type, List<ExprNode.VarNode> ids, ExprNode expr, boolean isConst,
+    public DeclNode(TypeNode type, String id, ExprNode expr, boolean isConst,
                     int line, int column) {
         super (line, column);
         this.type = type;
-        this.ids = ids;
+        this.id = id;
         this.expr = expr;
         this.isConst = isConst;
     }
@@ -21,7 +21,7 @@ public class DeclNode extends Node {
     public TypeNode getType() {
         return type;
     }
-    public List<ExprNode.VarNode> getIds() { return this.ids; }
+    public String getId() { return this.id; }
 
     public boolean isConst() { return this.isConst; }
 
