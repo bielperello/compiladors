@@ -1,4 +1,8 @@
 principal prova1 :
-    enter x =
-    logic y := cert
+    inici
+        tupla {nom: cadena, edat: enter} Persona
+        Persona p
+    fi
+
+    p.yo := "Hola"
 fprincipal

@@ -93,9 +93,12 @@ comentari = ##.*
 ")"                  { return symbol(ParserSym.TANC_PAR); }
 "["                  { return symbol(ParserSym.OBR_CORX); }
 "]"                  { return symbol(ParserSym.TANC_CORX); }
+"{"                  { return symbol(ParserSym.OBR_CLAU); }
+"}"                  { return symbol(ParserSym.TANC_CLAU); }
 ","                  { return symbol(ParserSym.COMA);}
 ";"                  { return symbol(ParserSym.PUNT_COMA); }
 "."                  { return symbol(ParserSym.PUNT); }
+"-"                  { return symbol(ParserSym.GUIO); }
 
 
 {op_aritmetic}       {
@@ -155,6 +158,9 @@ comentari = ##.*
 "const"              { return symbol(ParserSym.CONST); }
 "entrada"            { return symbol(ParserSym.INPUT); }
 "sortida"            { return symbol(ParserSym.OUTPUT); }
+"inici"              { return symbol(ParserSym.INICI); }
+"fi"                 { return symbol(ParserSym.FI); }
+
 
 // VALORS i IDENTIFICADORS
 {cadena}            {

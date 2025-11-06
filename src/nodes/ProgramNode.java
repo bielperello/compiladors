@@ -1,5 +1,7 @@
 package nodes;
 
+import nodes.instructions.InstrNode;
+
 import java.util.Collections;
 import java.util.List;
 

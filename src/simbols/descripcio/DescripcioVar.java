@@ -1,7 +1,6 @@
 package simbols.descripcio;
 
-import nodes.ExprNode;
-import nodes.TypeNode;
+import nodes.expresions.ExprNode;
 
 import java.util.List;
 

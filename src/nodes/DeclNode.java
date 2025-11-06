@@ -1,6 +1,6 @@
 package nodes;
 
-import java.util.List;
+import nodes.expresions.ExprNode;
 
 public class DeclNode extends Node {
     private final TypeNode type;

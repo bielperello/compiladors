@@ -12,6 +12,10 @@
 import java_cup.runtime.*;
 import java_cup.runtime.ComplexSymbolFactory.ComplexSymbol;
 import nodes.*;
+import nodes.expresions.*;
+import nodes.instructions.*;
+import nodes.instructions.conditionals.*;
+import nodes.instructions.loops.*;
 import errors.*;
 import java.util.*;
 
@@ -64,11 +68,11 @@ terminal Symbol
             FUNCIO, ENDFUNCIO, TORNAR, CONST,
             OP_TIPUS_CADENA, OP_TIPUS_TUPLA, OP_TIPUS_CARACTER,
             OP_TIPUS_ENTER, OP_TIPUS_LOGIC,
-            PLUS, MINUS, TIMES, DIVIDE,
+            PLUS, MINUS, TIMES, DIVIDE, GUIO,
             EQ, NE, LT, LE, GT, GE, INPUT, OUTPUT,
-            AND, OR, NOT, ASSIGNACIO, OBR_PAR,
-            TANC_PAR, OBR_CORX, TANC_CORX, DOS_PUNTS,
-            COMA, PUNT_COMA, PUNT, ERROR;
+            AND, OR, NOT, ASSIGNACIO, OBR_PAR,TANC_PAR,
+            OBR_CORX, TANC_CORX, OBR_CLAU, TANC_CLAU, DOS_PUNTS,
+            COMA, PUNT_COMA, PUNT, ERROR, INICI, FI;
 
 terminal String ID, CADENA;
 terminal Character CARACTER;
@@ -81,9 +85,9 @@ non terminal List<MethodNode> methods;
 non terminal List<InstrNode> instrs, optional_cond;
 non terminal DeclNode decl;
 non terminal InstrNode instr,  entrada, sortida;
-non terminal InstrNode.CallNode call;
+non terminal CallNode call;
 non terminal CondNode cond;
-non terminal CondNode.SwitchNode.CaseNode cas_opcio;
+non terminal CaseNode cas_opcio;
 non terminal LoopNode loop;
 non terminal MethodNode method;
 non terminal TypeNode tipus;
@@ -92,10 +96,10 @@ non terminal ExprNode expr_logic, expr_rel, expr_arit;
 non terminal RefNode ref;
 non terminal ArgNode arg;
 non terminal List<ArgNode> args;
-non terminal List<CondNode.SwitchNode.CaseNode> cas_opcions;
+non terminal List<CaseNode> cas_opcions;
 non terminal String op_arit, op_rel, op_log;
 non terminal List<ExprNode> expr_list;
-non terminal InstrNode.AssignNode assign_instr;
+non terminal AssignNode assign_instr;
 
 // Associativitat i precedència dels operadors
 precedence left OR;            // OR més baix que AND
@@ -110,7 +114,7 @@ precedence right NOT;          // negació (NOT) té associativitat a la dreta
 
 start with program;
 
-program ::= PRINCIPAL:p ID:id DOS_PUNTS decls:d methods:m instrs:i ENDPRINCIPAL
+program ::= PRINCIPAL:p ID:id DOS_PUNTS INICI decls:d methods:m FI instrs:i ENDPRINCIPAL
             {: RESULT = new ProgramNode(id, d, m, i, pleft, pright); :}
 ;
 
@@ -151,7 +155,7 @@ methods ::= method:m methods:ms
 method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS instrs:i TORNAR expr:e ENDFUNCIO
             {: RESULT = new MethodNode(true, id, t, a, i, e, fleft, fright); :}
         | PROCEDIMENT:p ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS instrs:i ENDPROCEDIMENT
-            {: RESULT = new MethodNode(false, id, new TypeNode(TypeNode.Kind.VOID, pleft, pright),
+            {: RESULT = new MethodNode(false, id, new TypeNode(Kind.VOID, pleft, pright),
                                       a, i, null, pleft, pright); :}
 ;
 
@@ -186,17 +190,17 @@ instr ::= call:c
 ;
 
 assign_instr ::= ref:r ASSIGNACIO expr:e
-            {: RESULT = new InstrNode.AssignNode(r, e, rleft, rright); :}
+            {: RESULT = new AssignNode(r, e, rleft, rright); :}
 ;
 
 call ::= ID:id OBR_PAR:op expr_list:e TANC_PAR
-            {: RESULT = new InstrNode.CallNode(id, e, idleft, idright); :}
+            {: RESULT = new CallNode(id, e, idleft, idright); :}
 ;
 
 cond ::= OP_IF:op OBR_PAR expr:e TANC_PAR OP_THEN instrs:i optional_cond:o OP_ENDIF
-            {: RESULT = new CondNode.IfNode(e, i, o, opleft, opright); :}
+            {: RESULT = new IfNode(e, i, o, opleft, opright); :}
         | OP_SWITCH:op expr:e DOS_PUNTS cas_opcions:c DEFAULT_SWITCH DOS_PUNTS instrs:i OP_ENDSWITCH
-            {: RESULT = new CondNode.SwitchNode(e, c, i, opleft, opright); :}
+            {: RESULT = new SwitchNode(e, c, i, opleft, opright); :}
 ;
 
 optional_cond ::= OP_ELSE instrs:i
@@ -212,35 +216,35 @@ cas_opcions ::= cas_opcio:c cas_opcions:cs
 ;
 
 cas_opcio ::= terme:t DOS_PUNTS:d instrs:i
-            {: RESULT = new CondNode.SwitchNode.CaseNode(t, i, t.line, t.column); :}
+            {: RESULT = new CaseNode(t, i, t.line, t.column); :}
 ;
 
 loop ::= OP_WHILE:w OBR_PAR expr:e TANC_PAR OP_DO instrs:i OP_ENDWHILE
-            {: RESULT = new LoopNode.WhileNode(e, i, wleft, wright); :}
+            {: RESULT = new WhileNode(e, i, wleft, wright); :}
         | OP_DO:d instrs:i OP_REP OBR_PAR expr:e TANC_PAR
-            {: RESULT = new LoopNode.DoWhileNode(i, e, dleft, dright); :}
+            {: RESULT = new DoWhileNode(i, e, dleft, dright); :}
 ;
 
 entrada ::= INPUT:i OBR_PAR ref:r TANC_PAR
-            {: RESULT = new InstrNode.InputNode(r, ileft, iright); :}
+            {: RESULT = new InputNode(r, ileft, iright); :}
 ;
 
 sortida ::= OUTPUT:o OBR_PAR expr:e TANC_PAR
-            {: RESULT = new InstrNode.OutputNode(e, oleft, oright); :}
+            {: RESULT = new OutputNode(e, oleft, oright); :}
 ;
 
 tipus ::= OP_TIPUS_ENTER:op
-            {: RESULT = new TypeNode(TypeNode.Kind.ENTER, opleft, opright); :}
+            {: RESULT = new TypeNode(Kind.ENTER, opleft, opright); :}
         | OP_TIPUS_CADENA:op
-            {: RESULT = new TypeNode(TypeNode.Kind.CADENA, opleft, opright); :}
+            {: RESULT = new TypeNode(Kind.CADENA, opleft, opright); :}
         | OP_TIPUS_CARACTER:op
-            {: RESULT = new TypeNode(TypeNode.Kind.CARACTER, opleft, opright); :}
+            {: RESULT = new TypeNode(Kind.CARACTER, opleft, opright); :}
         | OP_TIPUS_LOGIC:op
-            {: RESULT = new TypeNode(TypeNode.Kind.LOGIC, opleft, opright); :}
-        | OP_TIPUS_TUPLA:op
-            {: RESULT = new TypeNode(TypeNode.Kind.TUPLA, opleft, opright); :}
+            {: RESULT = new TypeNode(Kind.LOGIC, opleft, opright); :}
+        | OP_TIPUS_TUPLA:op OBR_CLAU args:a TANC_CLAU
+            {: RESULT = new TypeNode(Kind.TUPLA, a, opleft, opright); :}
         | ID:id
-            {: RESULT = new TypeNode(TypeNode.Kind.USER, id, idleft, idright); :}
+            {: RESULT = new TypeNode(Kind.USER, id, idleft, idright); :}
 ;
 
 args ::= arg:a COMA args:as
@@ -266,51 +270,47 @@ expr ::= expr_logic:e
 ;
 
 expr_logic ::= expr_logic:el op_log:op expr_rel:er
-            {: RESULT = new ExprNode.BinaryOpNode(el, op, er); :}
+            {: RESULT = new BinaryOpNode(el, op, er); :}
         | expr_rel:er
             {: RESULT = er; :}
 ;
 
 expr_rel ::= expr_rel:er op_rel:op expr_arit:ea
-            {: RESULT = new ExprNode.BinaryOpNode(er, op, ea); :}
+            {: RESULT = new BinaryOpNode(er, op, ea); :}
         | expr_arit:ea
             {: RESULT = ea; :}
 ;
 
 expr_arit ::= expr_arit:ea op_arit:op terme:t
-            {: RESULT = new ExprNode.BinaryOpNode(ea, op, t); :}
+            {: RESULT = new BinaryOpNode(ea, op, t); :}
         | terme:t
             {: RESULT = t; :}
 ;
 
 terme ::= VALOR_LOGIC:vl
-            {: RESULT = new ExprNode.LiteralNode(vl, vlleft, vlright); :}
+            {: RESULT = new LiteralNode(vl, vlleft, vlright); :}
         | ENTER:e
-            {: RESULT = new ExprNode.LiteralNode(e, eleft, eright); :}
+            {: RESULT = new LiteralNode(e, eleft, eright); :}
         | ref:r
             {: RESULT = r; :}
         | CADENA:c
-            {: RESULT = new ExprNode.LiteralNode(c, cleft, cright); :}
+            {: RESULT = new LiteralNode(c, cleft, cright); :}
         | CARACTER:c
-            {: RESULT = new ExprNode.LiteralNode(c, cleft, cright); :}
+            {: RESULT = new LiteralNode(c, cleft, cright); :}
         | call:c
             {: RESULT = new ExprNode.ExprInstrNode(c); :}
         | OBR_PAR expr:e TANC_PAR
             {: RESULT = e; :}
-        | OBR_CORX:o expr_list:e TANC_CORX
-            {: RESULT = new ExprNode.TupleNode(e, oleft, oright); :}
         | NOT:n expr:e
-            {: RESULT = new ExprNode.UnaryOpNode("NOT", e, nleft, nright); :}
+            {: RESULT = new UnaryOpNode("NOT", e, nleft, nright); :}
+        | GUIO:g expr:e
+            {: RESULT = new UnaryOpNode("-", e, gleft, gright); :}
 ;
 
-ref ::= ID:id index_opt:i
-            {: RESULT = new RefNode(id, i, idleft, idright); :}
-;
-
-index_opt ::= OBR_CORX:o expr:e TANC_CORX
-            {: RESULT = e; :}
-        | /* buit */
-            {: RESULT = null; :}
+ref ::= ID:id
+            {: RESULT = new RefNode(id, idleft, idright); :}
+        | ref:r PUNT ID:id
+            {: RESULT = new RefNode.CampAccessNode(r, id, r.line, r.column); :}
 ;
 
 expr_list ::= expr:e COMA expr_list:el

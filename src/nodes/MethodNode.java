@@ -1,5 +1,8 @@
 package nodes;
 
+import nodes.expresions.ExprNode;
+import nodes.instructions.InstrNode;
+
 import java.util.Collections;
 import java.util.List;
 

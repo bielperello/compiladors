@@ -1,16 +1,21 @@
 package nodes;
 
-public class TypeNode extends Node {
-    public enum Kind {
-        INTEGER, DOUBLE, ENTER, CADENA, CARACTER, LOGIC,
-        TUPLA, ARRAY, VOID, USER, UNKNOWN
-    }
+import java.util.ArrayList;
+import java.util.List;
 
+public class TypeNode extends Node {
     private final Kind kind;
-    private final String customTypeName;
+    private String customTypeName;
+    private List<ArgNode> fields;      // Camps si és TUPLA
 
     public TypeNode(Kind kind, int line, int column) {
-        this(kind, null, line, column);
+        this(kind, new ArrayList<>(), line, column);
+    }
+
+    public TypeNode(Kind kind, List<ArgNode> fields ,int line, int column) {
+        super(line, column);
+        this.kind = kind;
+        this.fields = fields;
     }
 
     public TypeNode(Kind kind, String customTypeName, int line, int column) {
@@ -22,27 +27,18 @@ public class TypeNode extends Node {
     public Kind getKind() {
         return kind;
     }
-
     public String getType() { return kind.toString(); }
-    public String getCustomTypeName() {
-        return customTypeName;
-    }
+    public String getLookupName() { return kind.name().toLowerCase(); }
+    public String getCustomTypeName() { return this.customTypeName; }
+    public List<ArgNode> getFields() { return this.fields; }
 
-    public boolean isUserDefined() {
-        return kind == Kind.USER || customTypeName != null;
-    }
-
-    public String getLookupName() {
-        return customTypeName != null ? customTypeName : kind.name().toLowerCase();
-    }
+    public void setCustomTypeName(String customTypeName) { this.customTypeName = customTypeName; }
 
     @Override
-    public void generateCode() {
-        // No genera codi directe
-    }
+    public void generateCode() {}
 
     @Override
     public String toString() {
-        return customTypeName != null ? customTypeName : kind.name().toLowerCase();
+        return kind.name().toLowerCase();
     }
 }

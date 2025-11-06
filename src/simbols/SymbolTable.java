@@ -49,6 +49,12 @@ public class SymbolTable {
         nextId = 0;
     }
 
+    public void updateSymbol(String id, Descripcio novaDesc) {
+        Simbol s = this.lookUp(id);
+        if (s != null) s.setDescripcio(novaDesc);
+    }
+
+
     public void inicialitzaValorsEstandard() {
 
         // --- Tipus LOGIC (booleà) ---

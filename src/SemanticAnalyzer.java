@@ -1,3 +1,8 @@
+import nodes.conditionals.CondNode;
+import nodes.expresions.ExprNode;
+import nodes.expresions.RefNode;
+import nodes.instructions.InstrNode;
+import nodes.loops.LoopNode;
 import simbols.*;
 import nodes.*;
 import simbols.descripcio.*;
@@ -56,20 +61,28 @@ public class SemanticAnalyzer {
             return;
         }
 
-        DescripcioTipus tipusDeclarat = cercaTipus(decl.getType().getKind());
+        if (decl.getType().getKind() == TypeNode.Kind.TUPLA) {
+            novaTupla(decl);
+            return;
+        }
+
+        DescripcioTipus tipusDeclarat = cercaTipus(decl.getType().getKind(), decl.getType().getCustomTypeName());
 
         ExprNode assig = decl.getExpr();
+
+        if (decl.getType().getKind() == TypeNode.Kind.USER && assig != null) {
+            ErrorManager.add(new CompilerError(
+                    decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
+                    "Les variables de tipus '" + decl.getType().getCustomTypeName() +
+                            "' (tuples o tipus definits) no poden inicialitzar-se directament."
+            ));
+            decl.setHasError(true);
+            assig = null; // ignora l'expressió
+        }
+
         if (assig != null) {
             gest_expr(assig);
             if (assig.hasError()) decl.setHasError(true);
-        }
-
-        if (isTuple(tipusDeclarat) && assig == null) {
-            ErrorManager.add(new CompilerError(
-                    decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
-                    "Les tuples s'han d'inicialitzar sempre en la declaració."
-            ));
-            decl.setHasError(true);
         }
 
         if (!decl.hasError() && assig != null) {
@@ -86,7 +99,7 @@ public class SemanticAnalyzer {
         DescripcioVar desc = new DescripcioVar(decl.hasError() ? cercaTipus(TypeNode.Kind.UNKNOWN) : tipusDeclarat);
         if (assig != null) desc.setInitialized(true);
 
-        if (!currentScope.add(new Simbol(decl.getId(), desc, decl.line, decl.column, currentScope.getScopeId()))) {
+        if (!currentScope.add(new Simbol(decl.getId(), desc, currentScope.getScopeId()))) {
             ErrorManager.add(new CompilerError(
                     decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
                     "La variable '" + decl.getId() + "' ja ha estat declarada."
@@ -95,93 +108,159 @@ public class SemanticAnalyzer {
         }
     }
 
+    private void novaTupla(DeclNode decl) {
+        TypeNode tipusNode = decl.getType();
+        String nomTupla = decl.getId();
 
-    public void gest_decl_const(DeclNode decl) {
-        if (decl == null) return;
-
-        DescripcioTipus tipusDeclarat = cercaTipus(decl.getType().getKind());
-
-        TypeNode.Kind base = tipusDeclarat.getTipusBase();
-        if (base != TypeNode.Kind.INTEGER && base != TypeNode.Kind.CARACTER &&
-                base != TypeNode.Kind.LOGIC   && base != TypeNode.Kind.DOUBLE &&
-                base != TypeNode.Kind.ENTER)
-        {
+        if (decl.getExpr() != null) {
             ErrorManager.add(new CompilerError(
                     decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
-                    "Només es poden declarar constants de tipus escalar (enter, caracter, logic o double)."
+                    "Les definicions de tipus 'tupla' no poden tenir una assignació."
             ));
             decl.setHasError(true);
+            return;
         }
 
-        ExprNode assig = decl.getExpr();
-        if (assig == null) {
-            ErrorManager.add(new CompilerError(
-                    decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
-                    "La constant '" + decl.getId() + "' ha de tenir un valor inicial."
-            ));
-            decl.setHasError(true);
-        } else {
-            gest_expr(assig);
-            if (assig.hasError()) decl.setHasError(true);
+        // crear descripció base
+        DescripcioTipus descTupla = new DescripcioTipus(nomTupla, TypeNode.Kind.TUPLA, 0);
 
-            if (!decl.hasError()) {
-                DescripcioTipus tipusValor = assig.getDescripcioTipus();
-                if (!TipusUtils.sonCompatibles(tipusDeclarat, tipusValor)) {
-                    ErrorManager.add(new CompilerError(
-                            assig.line, assig.column, CompilerError.TYPE.SEMANTIC,
-                            "Tipus incompatible: s'espera " + tipusDeclarat.getNomTipus() +
-                                    " però s'ha trobat " + tipusValor.getNomTipus()
-                    ));
-                    decl.setHasError(true);
-                }
-            }
-        }
+        // construir camps
+        List<DescripcioTipus.CampRecord> camps = new ArrayList<>();
+        Set<String> nomsCamps = new HashSet<>();
+        int offset = 0;
 
-        Object valor = null;
-        if (assig instanceof ExprNode.LiteralNode lit) {
-            valor = lit.getValue();
-        } else if (assig != null) {
-            ErrorManager.add(new CompilerError(
-                    assig.line, assig.column, CompilerError.TYPE.SEMANTIC,
-                    "El valor d'una constant ha de ser una expressió constant o literal."
-            ));
-            decl.setHasError(true);
-        }
-
-        if (valor instanceof Number vnum) {
-            double val = vnum.doubleValue();
-            Integer li = tipusDeclarat.getLimitInf();
-            Integer ls = tipusDeclarat.getLimitSup();
-            if (li != null && val < li) {
+        for (ArgNode camp : tipusNode.getFields()) {
+            if (!nomsCamps.add(camp.getName())) {
                 ErrorManager.add(new CompilerError(
-                        decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
-                        "El valor assignat és inferior al límit inferior del tipus."
+                        camp.line, camp.column, CompilerError.TYPE.SEMANTIC,
+                        "Camp duplicat '" + camp.getName() + "' dins la tupla '" + nomTupla + "'."
                 ));
                 decl.setHasError(true);
+                continue;
             }
-            if (ls != null && val > ls) {
+
+            DescripcioTipus descCamp = cercaTipus(camp.getType().getKind(), camp.getType().getCustomTypeName());
+            if (descCamp == null) {
                 ErrorManager.add(new CompilerError(
-                        decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
-                        "El valor assignat és superior al límit superior del tipus."
+                        camp.line, camp.column, CompilerError.TYPE.SEMANTIC,
+                        "Tipus del camp '" + camp.getName() + "' no declarat."
                 ));
                 decl.setHasError(true);
+                continue;
             }
+
+            camps.add(new DescripcioTipus.CampRecord(camp.getName(), descCamp, offset));
+            offset += descCamp.getOcupacio();
         }
 
-        DescripcioConst descConst = new DescripcioConst(
-                decl.hasError() ? cercaTipus(TypeNode.Kind.UNKNOWN) : tipusDeclarat,
-                valor
-        );
+        if (decl.hasError()) return;
 
-        if (!currentScope.add(new Simbol(decl.getId(), descConst, decl.line, decl.column, currentScope.getScopeId()))) {
+        descTupla.setCamps(camps);
+        descTupla.setOcupacio(offset > 0 ? offset : 1);
+
+        Simbol s = new Simbol(nomTupla, descTupla, currentScope.getScopeId());
+        if (!currentScope.add(s)) {
             ErrorManager.add(new CompilerError(
                     decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
-                    "La constant '" + decl.getId() + "' ja ha estat declarada."
+                    "La tupla '" + decl.getId() + "' ja ha estat declarada."
             ));
             decl.setHasError(true);
         }
     }
 
+    // DECL -> CONST TIPUS ID := E
+    public void gest_decl_const(DeclNode decl) {
+        if (decl == null) return;
+
+        Simbol s = currentScope.lookUp(decl.getType().getLookupName());
+
+        // Cercar el tipus declarat
+        if (s == null) {
+            ErrorManager.add(new CompilerError(
+                    decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
+                    "El tipus '" + decl.getType().getLookupName() + "' no està declarat."
+            ));
+            decl.setHasError(true);
+            return;
+        }
+
+        // Comprovar que el tipus és una descripció de tipus
+        if(!(s.getDescripcio() instanceof DescripcioTipus dt)) {
+            ErrorManager.add(new CompilerError(
+                    decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
+                    "El símbol '" + decl.getType().getLookupName() + "' no és un tipus vàlid."
+            ));
+            decl.setHasError(true);
+            return;
+        }
+
+        TypeNode.Kind tsb = dt.getTipusBase();
+
+        // Comprovar que el tipus és l'adequat
+        if (tsb != TypeNode.Kind.ENTER && tsb != TypeNode.Kind.CADENA && tsb != TypeNode.Kind.CARACTER
+                && tsb != TypeNode.Kind.LOGIC) {
+            ErrorManager.add(new CompilerError(
+                    decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
+                    "El tipus '" + tsb + "' no pot emprar-se per declarar una constant."
+            ));
+            decl.setHasError(true);
+            return;
+        }
+
+        // Analitzar l'expressió associada
+        ExprNode assig = decl.getExpr();
+        gest_expr(assig);
+
+        // Comprovar compatibilitat de tipus (valor i id)
+        if (!TipusUtils.sonCompatibles(dt, assig.getDescripcioTipus())) {
+            ErrorManager.add(new CompilerError(
+                    decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
+                    "El tipus de l'expressió no és compatible amb el tipus de la constant '" + decl.getId() + "'."
+            ));
+            decl.setHasError(true);
+        }
+
+
+        Object valor;
+        if (assig instanceof ExprNode.LiteralNode lit) {
+            valor = lit.getValue();
+
+            int v = (Integer) valor;
+            if (v < dt.getLimitInf() || v > dt.getLimitSup()) {
+                ErrorManager.add(new CompilerError(
+                        decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
+                        "El valor " + v + " està fora del rang permès per al tipus '" + dt.getNomTipus() + "'."
+                ));
+                decl.setHasError(true);
+            } else if ((Integer) valor > dt.getLimitSup()) {
+                ErrorManager.add(new CompilerError(decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
+                        " "));
+            }
+        } else if (assig instanceof RefNode r) {
+            Simbol sr = currentScope.lookUp(r.getId());
+
+            if(!(sr.getDescripcio() instanceof DescripcioConst)) {
+                ErrorManager.add(new CompilerError(decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
+                        " "));
+                decl.setHasError(true);
+            } else {
+
+            }
+        }
+
+
+        if (!decl.hasError()) {
+            // Afegir la declaració si tot és correcte
+            DescripcioConst dc = new DescripcioConst(dt, valor);
+            if (!currentScope.add(new Simbol(decl.getId(), dc, currentScope.getScopeId()))) {
+                ErrorManager.add(new CompilerError(
+                        decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
+                        "La constant '" + decl.getId() + "' ja ha estat declarada."
+                ));
+                decl.setHasError(true);
+            }
+        }
+    }
 
 
     public void gest_methods(List<MethodNode> methods) {
@@ -211,7 +290,7 @@ public class SemanticAnalyzer {
                 m.getParams() != null ? m.getParams() : new ArrayList<>()
         );
 
-        Simbol sProc = new Simbol(m.getName(), descProc, m.line, m.column, currentScope.getScopeId());
+        Simbol sProc = new Simbol(m.getName(), descProc, currentScope.getScopeId());
         if (!currentScope.add(sProc)) {
             ErrorManager.add(new CompilerError(
                     m.line, m.column, CompilerError.TYPE.SEMANTIC,
@@ -241,7 +320,7 @@ public class SemanticAnalyzer {
                 }
 
                 DescripcioArg descArg = new DescripcioArg(name, tipusArg);
-                Simbol sArg = new Simbol(name, descArg, arg.line, arg.column, currentScope.getScopeId());
+                Simbol sArg = new Simbol(name, descArg, currentScope.getScopeId());
 
                 if (!currentScope.add(sArg)) {
                     ErrorManager.add(new CompilerError(
@@ -621,6 +700,13 @@ public class SemanticAnalyzer {
     public void gest_ref(RefNode r) {
         if (r == null) return;
 
+        // R0 -> R1 . id
+        if(r instanceof RefNode.CampAccessNode ca) {
+            gest_ref_camp(ca);
+            return;
+        }
+
+        // R0 -> id
         String id = r.getId();
         Simbol s = currentScope.lookUp(id);
 
@@ -636,72 +722,120 @@ public class SemanticAnalyzer {
         }
 
         Descripcio desc = s.getDescripcio();
+        r.setDesc(desc);
+
         DescripcioTipus tipus;
         RefNode.ModeRef mode;
 
-        if (desc instanceof DescripcioVar dVar) {
-            tipus = dVar.getType();
-            mode = RefNode.ModeRef.VAR;
+        switch (desc) {
+            case DescripcioVar dVar -> {
+                tipus = dVar.getType();
+                mode = RefNode.ModeRef.VAR;
 
-            if (!dVar.getInitialized()) {
+                if (!dVar.getInitialized() && !isTuple(tipus)) {
+                    ErrorManager.add(new CompilerError(
+                            r.line, r.column, CompilerError.TYPE.SEMANTIC,
+                            "La variable '" + id + "' s'utilitza abans d'haver estat inicialitzada."
+                    ));
+                    r.setHasError(true);
+                }
+            }
+            case DescripcioArg dArg -> {
+                tipus = dArg.getType();
+                mode = RefNode.ModeRef.VAR;
+            }
+            case DescripcioConst dConst -> {
+                tipus = dConst.getType();
+                mode = RefNode.ModeRef.CONST;
+            }
+            case DescripcioProc dProc -> {
+                tipus = dProc.getType();
+                mode = RefNode.ModeRef.PROCF;
+            }
+            case null, default -> {
                 ErrorManager.add(new CompilerError(
                         r.line, r.column, CompilerError.TYPE.SEMANTIC,
-                        "La variable '" + id + "' s'utilitza abans d'haver estat inicialitzada."
+                        "Tipus d'identificador no vàlid per a referència: " + id
                 ));
-                r.setHasError(true);
+                tipus = cercaTipus(TypeNode.Kind.UNKNOWN);
+                mode = RefNode.ModeRef.UNKNOWN;
             }
-        }
-        else if (desc instanceof DescripcioArg dArg) {
-            tipus = dArg.getType();
-            mode = RefNode.ModeRef.VAR;
-        }
-        else if (desc instanceof DescripcioConst dConst) {
-            tipus = dConst.getType();
-            mode = RefNode.ModeRef.CONST;
-        }
-        else if (desc instanceof DescripcioProc dProc) {
-            tipus = dProc.getType();
-            mode = RefNode.ModeRef.PROCF;
-        }
-        else {
-            ErrorManager.add(new CompilerError(
-                    r.line, r.column, CompilerError.TYPE.SEMANTIC,
-                    "Tipus d'identificador no vàlid per a referència: " + id
-            ));
-            tipus = cercaTipus(TypeNode.Kind.UNKNOWN);
-            mode = RefNode.ModeRef.UNKNOWN;
-            r.setHasError(true);
         }
 
         r.setDescripcioTipus(tipus);
         r.setModeRef(mode);
 
         if (tipus.getTipusBase() == TypeNode.Kind.UNKNOWN) r.setHasError(true);
+    }
 
-        ExprNode index = r.getIndexOpt();
-        if (index != null) {
-            gest_expr(index);
-            DescripcioTipus tipusIndex = index.getDescripcioTipus();
+    // R0 -> R1 . id
+    // r -> base . campNom
+    private void gest_ref_camp(RefNode.CampAccessNode r) {
+        RefNode base = r.getBase();
+        gest_ref(base);
 
-            if (notNumeric(tipusIndex)) {
-                ErrorManager.add(new CompilerError(
-                        r.line, r.column, CompilerError.TYPE.SEMANTIC,
-                        "L’índex ha de ser un valor enter."
-                ));
-                r.setHasError(true);
-            }
+        if (base.hasError()) {
+            r.setHasError(true);
+            r.setDescripcioTipus(cercaTipus(TypeNode.Kind.UNKNOWN));
+            r.setModeRef(RefNode.ModeRef.UNKNOWN);
+            return;
+        }
 
-            if (!isTuple(tipus)) {
-                ErrorManager.add(new CompilerError(
-                        r.line, r.column, CompilerError.TYPE.SEMANTIC,
-                        "No es pot indexar una variable que no és una tupla."
-                ));
-                r.setHasError(true);
+        if(base.getModeRef() != RefNode.ModeRef.VAR && base.getModeRef() != RefNode.ModeRef.CONST) {
+            ErrorManager.add(new CompilerError(r.line, r.column, CompilerError.TYPE.SEMANTIC,
+                    "No es pot accedir a un camp que no sigui o variable o constant"));
+            r.setHasError(true);
+            r.setDescripcioTipus(cercaTipus(TypeNode.Kind.UNKNOWN));
+            r.setModeRef(RefNode.ModeRef.UNKNOWN);
+        }
+
+        String campNom = r.getId();
+
+        DescripcioTipus tipusBase = base.getDescripcioTipus();
+        if (!isTuple(tipusBase)) {
+            ErrorManager.add(new CompilerError(
+                    r.line, r.column, CompilerError.TYPE.SEMANTIC,
+                    "No es pot accedir al camp '" + campNom +
+                            "' perquè la referència no és una tupla."
+            ));
+            r.setHasError(true);
+            r.setDescripcioTipus(cercaTipus(TypeNode.Kind.UNKNOWN));
+            r.setModeRef(RefNode.ModeRef.UNKNOWN);
+            return;
+        }
+
+        // cercar el camp dins la tupla
+        DescripcioTipus.CampRecord campRecord = null;
+        for (DescripcioTipus.CampRecord c : tipusBase.getCamps()) {
+            if (c.getNom().equals(campNom)) {
+                campRecord = c;
+                break;
             }
         }
+
+        if (campRecord == null) {
+            ErrorManager.add(new CompilerError(
+                    r.line, r.column, CompilerError.TYPE.SEMANTIC,
+                    "El tipus de la tupla '" + tipusBase.getNomTipus() +
+                            "' no té cap camp anomenat '" + campNom + "'."
+            ));
+            r.setHasError(true);
+            r.setDescripcioTipus(cercaTipus(TypeNode.Kind.UNKNOWN));
+            r.setModeRef(RefNode.ModeRef.UNKNOWN);
+            return;
+        }
+
+        DescripcioTipus tipusCamp = campRecord.getTipus();
+
+        r.setDescripcioTipus(tipusCamp);
+        r.setModeRef(base.getModeRef());
     }
 
 
+    // E -> E_LOG
+    // E_LOG0 -> E_LOG1 OP_LOG E_REL | E_REL
+    // E_REL0 -> E_REL1 OP_REL E_ARIT | E_ARIT
+    // E_ARIT0 -> E_ARTI1 OP_ARIT TERM | TERM
     public void gest_expr(ExprNode e) {
         if (e == null) return;
 
@@ -775,6 +909,7 @@ public class SemanticAnalyzer {
             return;
         }
 
+        // E -> TERM
         gest_term(e);
 
         if (e.hasError() && e.getDescripcioTipus() == null) {
@@ -782,7 +917,7 @@ public class SemanticAnalyzer {
         }
     }
 
-
+    // TERM -> VALOR_LIT | REF | CALL | NOT E | ( E )
     public void gest_term(ExprNode e) {
         if (e == null) return;
 
@@ -792,122 +927,106 @@ public class SemanticAnalyzer {
             return;
         }
 
-        if (e instanceof ExprNode.LiteralNode lit) {
-            TypeNode.Kind kind = (lit.getKind() != null) ? lit.getKind() : TypeNode.Kind.UNKNOWN;
-            e.setDescripcioTipus(cercaTipus(kind));
-            e.setMode(ExprNode.ModeExpr.MODECONST);
-            return;
-        }
-
-        if (e instanceof RefNode ref) {
-            gest_ref(ref);
-            e.setDescripcioTipus(ref.getDescripcioTipus() != null
-                    ? ref.getDescripcioTipus()
-                    : cercaTipus(TypeNode.Kind.UNKNOWN));
-
-            RefNode.ModeRef modeRef = (ref.getModeRef() != null)
-                    ? ref.getModeRef()
-                    : RefNode.ModeRef.UNKNOWN;
-
-            e.setMode(modeRef == RefNode.ModeRef.CONST
-                    ? ExprNode.ModeExpr.MODECONST
-                    : ExprNode.ModeExpr.MODEVAR);
-
-            if (ref.hasError()) e.setHasError(true);
-            return;
-        }
-
-        if (e instanceof ExprNode.ExprInstrNode callExpr) {
-            InstrNode.CallNode call = callExpr.getCall();
-            gest_call(call);
-
-            DescripcioTipus tipusRetorn = call.getRetornTipus();
-            if (tipusRetorn == null) tipusRetorn = cercaTipus(TypeNode.Kind.UNKNOWN);
-
-            if (tipusRetorn.getTipusBase() == TypeNode.Kind.VOID) {
-                ErrorManager.add(new CompilerError(
-                        e.line, e.column, CompilerError.TYPE.SEMANTIC,
-                        "Un procediment no pot aparèixer dins una expressió."
-                ));
-                tipusRetorn = cercaTipus(TypeNode.Kind.UNKNOWN);
-                e.setHasError(true);
-            }
-
-            e.setDescripcioTipus(tipusRetorn);
-            e.setMode(ExprNode.ModeExpr.MODERESULT);
-
-            if (call.hasError()) e.setHasError(true);
-            return;
-        }
-
-        if (e instanceof ExprNode.UnaryOpNode un) {
-            gest_expr(un.getExpr());
-
-            if (un.getExpr().hasError()) {
-                e.setHasError(true);
-                e.setDescripcioTipus(cercaTipus(TypeNode.Kind.UNKNOWN));
-                e.setMode(ExprNode.ModeExpr.MODERESULT);
+        switch (e) {
+            // TERM -> VALOR_LIT
+            case ExprNode.LiteralNode lit -> {
+                TypeNode.Kind kind = (lit.getKind() != null) ? lit.getKind() : TypeNode.Kind.UNKNOWN;
+                e.setDescripcioTipus(cercaTipus(kind));
+                e.setMode(ExprNode.ModeExpr.MODECONST);
                 return;
             }
+            // TERM -> REF
+            case RefNode ref -> {
+                gest_ref(ref);
+                e.setDescripcioTipus(ref.getDescripcioTipus() != null ? ref.getDescripcioTipus()
+                        : cercaTipus(TypeNode.Kind.UNKNOWN));
 
-            DescripcioTipus tipusOp = un.getExpr().getDescripcioTipus();
-            String op = (un.getOperator() != null) ? un.getOperator() : "?";
-            DescripcioTipus resultat = cercaTipus(TypeNode.Kind.UNKNOWN);
+                RefNode.ModeRef modeRef = (ref.getModeRef() != null) ? ref.getModeRef()
+                        : RefNode.ModeRef.UNKNOWN;
 
-            switch (op) {
-                case "NOT" -> {
-                    if (notBoolean(tipusOp)) {
-                        ErrorManager.add(new CompilerError(
-                                un.line, un.column, CompilerError.TYPE.SEMANTIC,
-                                "L'operador 'NOT' només pot aplicar-se sobre valors booleans."
-                        ));
-                        e.setHasError(true);
-                    } else resultat = cercaTipus(TypeNode.Kind.LOGIC);
+                e.setMode(modeRef == RefNode.ModeRef.CONST ? ExprNode.ModeExpr.MODECONST
+                        : ExprNode.ModeExpr.MODEVAR);
+
+                if (ref.hasError()) e.setHasError(true);
+                return;
+            }
+            // TERM -> CALL
+            case ExprNode.ExprInstrNode callExpr -> {
+                InstrNode.CallNode call = callExpr.getCall();
+                gest_call(call);
+
+                if(call.hasError()) {
+                    e.setDescripcioTipus(cercaTipus(TypeNode.Kind.UNKNOWN));
+                    e.setMode(ExprNode.ModeExpr.MODERESULT);
+                    e.setHasError(true);
+                    return;
                 }
-                case "-" -> {
-                    if (notNumeric(tipusOp)) {
-                        ErrorManager.add(new CompilerError(
-                                un.line, un.column, CompilerError.TYPE.SEMANTIC,
-                                "L'operador unari '-' només pot aplicar-se sobre valors numèrics."
-                        ));
-                        e.setHasError(true);
-                    } else resultat = tipusOp; // conserva el tipus del operand
-                }
-                default -> {
+
+                DescripcioTipus tipusRetorn = call.getRetornTipus();
+                if (tipusRetorn == null) tipusRetorn = cercaTipus(TypeNode.Kind.UNKNOWN);
+
+                if (tipusRetorn.getTipusBase() == TypeNode.Kind.VOID) {
                     ErrorManager.add(new CompilerError(
-                            un.line, un.column, CompilerError.TYPE.SEMANTIC,
-                            "Operador unari desconegut: " + op
+                            e.line, e.column, CompilerError.TYPE.SEMANTIC,
+                            "Un procediment no pot aparèixer dins una expressió."
                     ));
+                    tipusRetorn = cercaTipus(TypeNode.Kind.UNKNOWN);
                     e.setHasError(true);
                 }
+
+                e.setDescripcioTipus(tipusRetorn);
+                e.setMode(ExprNode.ModeExpr.MODERESULT);
+
+                return;
             }
+            // TERM -> - E
+            case ExprNode.UnaryOpNode un -> {
+                gest_expr(un.getExpr());
 
-            e.setDescripcioTipus(resultat);
-            e.setMode(ExprNode.ModeExpr.MODERESULT);
-            return;
-        }
+                if (un.getExpr().hasError()) {
+                    e.setHasError(true);
+                    e.setDescripcioTipus(cercaTipus(TypeNode.Kind.UNKNOWN));
+                    e.setMode(ExprNode.ModeExpr.MODERESULT);
+                    return;
+                }
 
-        if (e instanceof ExprNode.TupleNode tuple) {
-            boolean elementError = false;
+                DescripcioTipus tipusOp = un.getExpr().getDescripcioTipus();
+                String op = (un.getOperator() != null) ? un.getOperator() : "?";
+                DescripcioTipus resultat = cercaTipus(TypeNode.Kind.UNKNOWN);
 
-            for (ExprNode element : tuple.getElements()) {
-                gest_expr(element);
-                if (element.hasError()) elementError = true;
-                if (element.getDescripcioTipus() == null)
-                    element.setDescripcioTipus(cercaTipus(TypeNode.Kind.UNKNOWN));
+                switch (op) {
+                    case "NOT" -> {
+                        if (notBoolean(tipusOp)) {
+                            ErrorManager.add(new CompilerError(
+                                    un.line, un.column, CompilerError.TYPE.SEMANTIC,
+                                    "L'operador 'NOT' només pot aplicar-se sobre valors booleans."
+                            ));
+                            e.setHasError(true);
+                        } else resultat = cercaTipus(TypeNode.Kind.LOGIC);
+                    }
+                    case "-" -> {
+                        if (notNumeric(tipusOp)) {
+                            ErrorManager.add(new CompilerError(
+                                    un.line, un.column, CompilerError.TYPE.SEMANTIC,
+                                    "L'operador unari '-' només pot aplicar-se sobre valors numèrics."
+                            ));
+                            e.setHasError(true);
+                        } else resultat = tipusOp; // conserva el tipus del operand
+                    }
+                    default -> {
+                        ErrorManager.add(new CompilerError(
+                                un.line, un.column, CompilerError.TYPE.SEMANTIC,
+                                "Operador unari desconegut: " + op
+                        ));
+                        e.setHasError(true);
+                    }
+                }
+
+                e.setDescripcioTipus(resultat);
+                e.setMode(ExprNode.ModeExpr.MODERESULT);
             }
-
-            e.setDescripcioTipus(cercaTipus(TypeNode.Kind.TUPLA));
-            e.setMode(ExprNode.ModeExpr.MODERESULT);
-
-            if (elementError) e.setHasError(true);
-            return;
+            default -> {}
         }
-
-        if (e.getDescripcioTipus() == null)
-            e.setDescripcioTipus(cercaTipus(TypeNode.Kind.UNKNOWN));
-        if (e.getMode() == null)
-            e.setMode(ExprNode.ModeExpr.MODERESULT);
     }
 
 
@@ -953,5 +1072,36 @@ public class SemanticAnalyzer {
 
         return dt;
     }
+
+    private DescripcioTipus cercaTipus(TypeNode.Kind kind, String customTypeName) {
+        if (kind == null) return cercaTipus(TypeNode.Kind.UNKNOWN);
+
+        switch (kind) {
+            case ENTER, CADENA, CARACTER, LOGIC, DOUBLE, INTEGER, ARRAY, TUPLA -> {
+                return cercaTipus(kind);
+            }
+            case USER -> {
+                Simbol s = currentScope.lookUp(customTypeName);
+                if (s == null) {
+                    ErrorManager.add(new CompilerError(0, 0, CompilerError.TYPE.SEMANTIC,
+                            "Tipus inexistent: " + customTypeName));
+                    return cercaTipus(TypeNode.Kind.UNKNOWN);
+                }
+
+                Descripcio d = s.getDescripcio();
+                if (!(d instanceof DescripcioTipus dt)) {
+                    ErrorManager.add(new CompilerError(0, 0, CompilerError.TYPE.SEMANTIC,
+                            "'" + customTypeName + "' no és un tipus vàlid."));
+                    return cercaTipus(TypeNode.Kind.UNKNOWN);
+                }
+
+                return dt;
+            }
+            default -> {
+                return cercaTipus(TypeNode.Kind.UNKNOWN);
+            }
+        }
+    }
+
 
 }

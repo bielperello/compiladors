@@ -6,7 +6,7 @@ import java.util.List;
 public class DescripcioTipus extends Descripcio {
     private final String nomTipus;
     private final TypeNode.Kind tipusBase;
-    private final int ocupacio;
+    private int ocupacio;
 
     private Integer limitInf;               // Límits per a enters
     private Integer limitSup;
@@ -57,6 +57,9 @@ public class DescripcioTipus extends Descripcio {
     public Integer getLimitSup() { return limitSup; }
     public DescripcioTipus getTipusElemental() { return tipusElemental; }
     public List<CampRecord> getCamps() { return camps; }
+
+    public void setCamps(List<CampRecord> c) { this.camps = c; }
+    public void setOcupacio(int ocupacio) {this.ocupacio = ocupacio; }
 
     public static class CampRecord {
         private final String nom;
