@@ -28,7 +28,10 @@ public class TypeNode extends Node {
         return kind;
     }
     public String getType() { return kind.toString(); }
-    public String getLookupName() { return kind.name().toLowerCase(); }
+    public String getLookupName() {
+        if (customTypeName != null) return customTypeName;
+        return kind.name().toLowerCase();
+    }
     public String getCustomTypeName() { return this.customTypeName; }
     public List<ArgNode> getFields() { return this.fields; }
 

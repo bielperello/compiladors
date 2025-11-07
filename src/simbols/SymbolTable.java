@@ -1,6 +1,8 @@
 package simbols;
 
 import java.util.*;
+
+import nodes.Kind;
 import simbols.descripcio.*;
 import nodes.TypeNode;
 
@@ -59,50 +61,50 @@ public class SymbolTable {
 
         // --- Tipus LOGIC (booleà) ---
         DescripcioTipus boolDesc = new DescripcioTipus(
-                "logic", TypeNode.Kind.LOGIC, 1
+                "logic", Kind.LOGIC, 1
         );
-        this.add(new Simbol("logic", boolDesc, 0, 0, this.getScopeId()));
+        this.add(new Simbol("logic", boolDesc, this.getScopeId()));
 
         // Constants "cert" i "fals"
         DescripcioConst certDesc = new DescripcioConst(boolDesc, -1);  // valor true
         DescripcioConst falsDesc = new DescripcioConst(boolDesc, 0);   // valor false
-        this.add(new Simbol("cert", certDesc, 0, 0, this.getScopeId()));
-        this.add(new Simbol("fals", falsDesc, 0, 0, this.getScopeId()));
+        this.add(new Simbol("cert", certDesc, this.getScopeId()));
+        this.add(new Simbol("fals", falsDesc, this.getScopeId()));
 
         // --- Tipus ENTER ---
         DescripcioTipus intDesc = new DescripcioTipus(
                 "enter", Integer.MIN_VALUE, Integer.MAX_VALUE, 4
         );
-        this.add(new Simbol("enter", intDesc, 0, 0, this.getScopeId()));
+        this.add(new Simbol("enter", intDesc, this.getScopeId()));
 
         // --- Tipus CARACTER ---
         DescripcioTipus charDesc = new DescripcioTipus(
                 "caracter", 0, 255, 1
         );
-        this.add(new Simbol("caracter", charDesc, 0, 0, this.getScopeId()));
+        this.add(new Simbol("caracter", charDesc, this.getScopeId()));
 
         // --- Tipus CADENA ---
         DescripcioTipus strDesc = new DescripcioTipus(
-                "cadena", TypeNode.Kind.CADENA, 0  // ocupació variable
+                "cadena", Kind.CADENA, 0  // ocupació variable
         );
-        this.add(new Simbol("cadena", strDesc, 0, 0, this.getScopeId()));
+        this.add(new Simbol("cadena", strDesc, this.getScopeId()));
 
         // --- Tipus TUPLA ---
         DescripcioTipus tupleDesc = new DescripcioTipus(
-                "tupla", TypeNode.Kind.TUPLA, 0
+                "tupla", Kind.TUPLA, 0
         );
-        this.add(new Simbol("tupla", tupleDesc, 0, 0, this.getScopeId()));
+        this.add(new Simbol("tupla", tupleDesc, this.getScopeId()));
 
         // --- Tipus VOID ---
         DescripcioTipus voidDesc = new DescripcioTipus(
-                "void", TypeNode.Kind.VOID, 0
+                "void", Kind.VOID, 0
         );
-        this.add(new Simbol("void", voidDesc, 0, 0, this.getScopeId()));
+        this.add(new Simbol("void", voidDesc, this.getScopeId()));
 
         // --- Tipus DESCONEGUT ---
         DescripcioTipus desconegutDesc = new DescripcioTipus(
-                "unknown", TypeNode.Kind.UNKNOWN, 0
+                "unknown", Kind.UNKNOWN, 0
         );
-        this.add(new Simbol("unknown", desconegutDesc, 0, 0, this.getScopeId()));
+        this.add(new Simbol("unknown", desconegutDesc, this.getScopeId()));
     }
 }

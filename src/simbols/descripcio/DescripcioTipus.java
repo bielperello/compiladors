@@ -1,11 +1,11 @@
 package simbols.descripcio;
 
-import nodes.TypeNode;
+import nodes.Kind;
 import java.util.List;
 
 public class DescripcioTipus extends Descripcio {
     private final String nomTipus;
-    private final TypeNode.Kind tipusBase;
+    private final Kind tipusBase;
     private int ocupacio;
 
     private Integer limitInf;               // Límits per a enters
@@ -14,7 +14,7 @@ public class DescripcioTipus extends Descripcio {
     private List<CampRecord> camps;         // Camps (si és una tupla)
 
     // Constructor bàsic per a tipus simples (enter, booleà, caracter...)
-    public DescripcioTipus(String nomTipus, TypeNode.Kind tipusBase, int ocupacio) {
+    public DescripcioTipus(String nomTipus, Kind tipusBase, int ocupacio) {
         super(TDesc.DTIPUS);
         this.nomTipus = nomTipus;
         this.tipusBase = tipusBase;
@@ -25,7 +25,7 @@ public class DescripcioTipus extends Descripcio {
     public DescripcioTipus(String nomTipus, int limitInf, int limitSup, int ocupacio) {
         super(TDesc.DTIPUS);
         this.nomTipus = nomTipus;
-        this.tipusBase = TypeNode.Kind.DOUBLE;
+        this.tipusBase = Kind.DOUBLE;
         this.limitInf = limitInf;
         this.limitSup = limitSup;
         this.ocupacio = ocupacio;
@@ -35,7 +35,7 @@ public class DescripcioTipus extends Descripcio {
     public DescripcioTipus(String nomTipus, DescripcioTipus tipusElemental, int ocupacio) {
         super(TDesc.DTIPUS);
         this.nomTipus = nomTipus;
-        this.tipusBase = TypeNode.Kind.ARRAY;
+        this.tipusBase = Kind.ARRAY;
         this.tipusElemental = tipusElemental;
         this.ocupacio = ocupacio;
     }
@@ -44,14 +44,14 @@ public class DescripcioTipus extends Descripcio {
     public DescripcioTipus(String nomTipus, List<CampRecord> camps, int ocupacio) {
         super(TDesc.DTIPUS);
         this.nomTipus = nomTipus;
-        this.tipusBase = TypeNode.Kind.TUPLA;
+        this.tipusBase = Kind.TUPLA;
         this.camps = camps;
         this.ocupacio = ocupacio;
     }
 
     // --- Getters generals ---
     public String getNomTipus() { return nomTipus; }
-    public TypeNode.Kind getTipusBase() { return tipusBase; }
+    public Kind getTipusBase() { return tipusBase; }
     public int getOcupacio() { return ocupacio; }
     public Integer getLimitInf() { return limitInf; }
     public Integer getLimitSup() { return limitSup; }

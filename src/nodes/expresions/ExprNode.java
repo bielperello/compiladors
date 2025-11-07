@@ -1,15 +1,13 @@
 package nodes.expresions;
 
+import nodes.Kind;
 import nodes.instructions.CallNode;
-import nodes.instructions.InstrNode;
 import nodes.Node;
-import nodes.TypeNode;
 import simbols.descripcio.DescripcioTipus;
-
 
 public class ExprNode extends Node {
 
-    protected TypeNode.Kind kind;
+    protected Kind kind;
     protected DescripcioTipus tipus;  // Tipus complet associat a l’expressió
     protected ModeExpr mode;          // Mode de l’expressió (var, const, result)
     protected int resultVar;          // E.r
@@ -23,8 +21,8 @@ public class ExprNode extends Node {
     @Override
     public void generateCode() {}
 
-    public TypeNode.Kind getKind() { return kind; }
-    public void setKind(TypeNode.Kind k) { this.kind = k; }
+    public Kind getKind() { return kind; }
+    public void setKind(Kind k) { this.kind = k; }
 
     public DescripcioTipus getDescripcioTipus() { return tipus; }
     public void setDescripcioTipus(DescripcioTipus t) { this.tipus = t; }

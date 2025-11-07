@@ -3,6 +3,7 @@ package nodes;
 import nodes.expresions.ExprNode;
 import nodes.instructions.InstrNode;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -30,8 +31,8 @@ public class MethodNode extends Node {
         this.isFunction = isFunction;
         this.name = name;
         this.returnType = returnType;
-        this.params = args != null ? args : Collections.emptyList();
-        this.instrs = instrs != null ? instrs : Collections.emptyList();
+        this.params = args != null ? args : new ArrayList<>();
+        this.instrs = instrs != null ? instrs : new ArrayList<>();
         this.returnExpr = returnExpr;
     }
 

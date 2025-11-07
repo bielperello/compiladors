@@ -92,6 +92,7 @@ non terminal LoopNode loop;
 non terminal MethodNode method;
 non terminal TypeNode tipus;
 non terminal ExprNode assig, expr, terme, index_opt;
+non terminal LiteralNode literal;
 non terminal ExprNode expr_logic, expr_rel, expr_arit;
 non terminal RefNode ref;
 non terminal ArgNode arg;
@@ -287,16 +288,10 @@ expr_arit ::= expr_arit:ea op_arit:op terme:t
             {: RESULT = t; :}
 ;
 
-terme ::= VALOR_LOGIC:vl
-            {: RESULT = new LiteralNode(vl, vlleft, vlright); :}
-        | ENTER:e
-            {: RESULT = new LiteralNode(e, eleft, eright); :}
+terme ::= literal:l
+            {: RESULT = l; :}
         | ref:r
             {: RESULT = r; :}
-        | CADENA:c
-            {: RESULT = new LiteralNode(c, cleft, cright); :}
-        | CARACTER:c
-            {: RESULT = new LiteralNode(c, cleft, cright); :}
         | call:c
             {: RESULT = new ExprNode.ExprInstrNode(c); :}
         | OBR_PAR expr:e TANC_PAR
@@ -305,6 +300,16 @@ terme ::= VALOR_LOGIC:vl
             {: RESULT = new UnaryOpNode("NOT", e, nleft, nright); :}
         | GUIO:g expr:e
             {: RESULT = new UnaryOpNode("-", e, gleft, gright); :}
+;
+
+literal ::= VALOR_LOGIC:vl
+            {: RESULT = new LiteralNode(vl, vlleft, vlright); :}
+        | ENTER:e
+            {: RESULT = new LiteralNode(e, eleft, eright); :}
+        | CADENA:c
+            {: RESULT = new LiteralNode(c, cleft, cright); :}
+        | CARACTER:c
+            {: RESULT = new LiteralNode(c, cleft, cright); :}
 ;
 
 ref ::= ID:id

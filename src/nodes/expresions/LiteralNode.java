@@ -2,7 +2,7 @@ package nodes.expresions;
 
 import codegen.CodeGenerator;
 import codegen.OpCode;
-import nodes.TypeNode;
+import nodes.Kind;
 
 import java.util.List;
 
@@ -18,17 +18,17 @@ public class LiteralNode extends ExprNode {
 
     private void inferKind() {
         if (value instanceof Integer || value instanceof Double || value instanceof Float)
-            this.kind = TypeNode.Kind.ENTER;
+            this.kind = Kind.ENTER;
         else if (value instanceof Boolean)
-            this.kind = TypeNode.Kind.LOGIC;
+            this.kind = Kind.LOGIC;
         else if (value instanceof String)
-            this.kind = TypeNode.Kind.CADENA;
+            this.kind = Kind.CADENA;
         else if (value instanceof Character)
-            this.kind = TypeNode.Kind.CARACTER;
+            this.kind = Kind.CARACTER;
         else if (value instanceof List)
-            this.kind = TypeNode.Kind.TUPLA;
+            this.kind = Kind.TUPLA;
         else
-            this.kind = TypeNode.Kind.UNKNOWN;
+            this.kind = Kind.UNKNOWN;
     }
 
     public Object getValue() { return value; }
