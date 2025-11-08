@@ -1,8 +1,11 @@
 principal prova1 :
-    inici
-        tupla {nom: cadena, edat: enter} Persona
-        Persona p
-    fi
+    funcio enter suma(x:enter, y:enter):
+        tornar x + y
+    fifuncio
 
-    p.yo := "Hola"
+
+
+    inici
+        enter x := 10
+    fi
 fprincipal

@@ -6,15 +6,21 @@ public class DeclNode extends Node {
     private final TypeNode type;
     private final String id;
     private final ExprNode expr;
-    private final boolean isConst;
+    private boolean isConst;
 
-    public DeclNode(TypeNode type, String id, ExprNode expr, boolean isConst,
-                    int line, int column) {
+    public DeclNode(TypeNode type, String id, ExprNode expr, boolean isConst, int line, int column) {
         super (line, column);
         this.type = type;
         this.id = id;
         this.expr = expr;
         this.isConst = isConst;
+    }
+
+    public DeclNode(TypeNode type, String id, ExprNode expr, int line, int column) {
+        super (line, column);
+        this.type = type;
+        this.id = id;
+        this.expr = expr;
     }
 
     public ExprNode getExpr() { return this.expr; }

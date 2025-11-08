@@ -10,14 +10,11 @@ import java.util.List;
 /**
  * Representa un subprograma (procediment o funció)
  */
-public class MethodNode extends Node {
+public class MethodNode extends DeclNode {
 
     private final boolean isFunction;
-    private final String name;
-    private final TypeNode returnType;
     private final List<ArgNode> params;
     private final List<InstrNode> instrs;
-    private final ExprNode returnExpr;
 
     public MethodNode(boolean isFunction,
                       String name,
@@ -27,13 +24,10 @@ public class MethodNode extends Node {
                       ExprNode returnExpr,
                       int line,
                       int column) {
-        super(line, column);
+        super(returnType, name, returnExpr, line, column);
         this.isFunction = isFunction;
-        this.name = name;
-        this.returnType = returnType;
         this.params = args != null ? args : new ArrayList<>();
         this.instrs = instrs != null ? instrs : new ArrayList<>();
-        this.returnExpr = returnExpr;
     }
 
     // ======================
@@ -41,21 +35,13 @@ public class MethodNode extends Node {
     // ======================
 
     public boolean isFunction() { return isFunction; }
-    public String getName() { return name; }
-    public TypeNode getType() { return returnType; }
     public List<ArgNode> getParams() { return params; }
     public List<InstrNode> getInstrs() { return instrs; }
-    public ExprNode getReturnExpr() { return returnExpr; }
 
     // ======================
     // Generació de codi
     // ======================
 
     @Override
-    public void generateCode() {
-        System.out.println((isFunction ? "funció " : "procediment ") + name + "()");
-        for (InstrNode instr : instrs) instr.generateCode();
-        if (isFunction && returnExpr != null)
-            System.out.println("return [EXPRESSIÓ]");
-    }
+    public void generateCode() {}
 }

@@ -39,7 +39,6 @@ public class SemanticAnalyzer {
     // ─────────────────────────────────────────────
     public void gest_program(ProgramNode p) {
         gest_decls(p.getDecls());
-        gest_methods(p.getMethods());
         gest_instrs(p.getInstrs());
         SymbolTable.registerClosedScope(currentScope);
     }
@@ -49,49 +48,64 @@ public class SemanticAnalyzer {
     // ─────────────────────────────────────────────
     public void gest_decls(List<DeclNode> decls) {
         if (decls == null) return;
-        for (DeclNode decl : decls) gest_decl(decl);
+        for (DeclNode decl : decls) {
+            if (decl instanceof MethodNode m) gest_method(m);
+            else gest_decl(decl);
+        }
     }
 
     public void gest_decl(DeclNode decl) {
         if (decl == null) return;
 
+        // gestió concreta si la declaració és de tipus TUPLA
         if (decl.getType().getKind() == Kind.TUPLA) {
             novaTupla(decl);
             return;
         }
 
+        // gestió del tipus de la variable a declarar
         TypeNode type = decl.getType();
         DescripcioTipus dt = gest_type(type);
 
+        // comprovar si el tipus té error
         if (type.hasError() || dt == null) {
+            // propagació d'errors
             decl.setHasError(true);
+            // gestionar l'expressió per observar tots els errors possibles
+            gest_expr(decl.getExpr());
             return;
         }
 
+        // gestió concreta d'una declaració constant
         if (decl.isConst()) {
             gest_decl_const(decl, dt);
             return;
         }
 
+        //
         Kind tsb = dt.getTipusBase();
         ExprNode assig = decl.getExpr();
+        gest_expr(assig);
 
+        // comprovar si el tipus de la variable a declarar és de tipus usuari (tupla declarada)
         if (decl.getType().getKind() == Kind.USER && assig != null) {
             ErrorManager.add(new CompilerError(
                     decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
                     "Les variables de tipus '" + decl.getType().getCustomTypeName() +
-                            "' (tuples o tipus definits) no poden inicialitzar-se directament."
+                            "' (tipus definits) no poden inicialitzar-se directament."
             ));
             decl.setHasError(true);
-            assig = null; // ignora l'expressió
+            return;
         }
 
         if (assig != null) {
-            gest_expr(assig);
-            if (assig.hasError()) decl.setHasError(true);
-        }
+            if (assig.hasError()) {
+                // propagació d'errors
+                decl.setHasError(true);
+                return;
+            }
 
-        if (!decl.hasError() && assig != null) {
+            // comprovar si són compatibles el tipus de la variable i de l'expressió
             Kind a_tsb = assig.getKind();
             if (!TipusUtils.sonCompatibles(a_tsb, tsb)) {
                 ErrorManager.add(new CompilerError(
@@ -102,9 +116,12 @@ public class SemanticAnalyzer {
             }
         }
 
+        // crear una nova descripció de variable amb el tipus corresponent
         DescripcioVar dv = new DescripcioVar(dt);
+        // si té una expressió assignada marcar com a inicialitzada
         if (assig != null) dv.setInitialized(true);
 
+        // afegir la variable a la taula de símbols
         if (!currentScope.add(new Simbol(decl.getId(), dv, currentScope.getScopeId()))) {
             ErrorManager.add(new CompilerError(
                     decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
@@ -115,9 +132,10 @@ public class SemanticAnalyzer {
     }
 
     private DescripcioTipus gest_type(TypeNode t) {
+        // cercar el nom del tipus a la taula de símbols
         Simbol s = currentScope.lookUp(t.getLookupName());
 
-        // Cercar el tipus declarat
+        // comprovar si el tipus existeix
         if (s == null) {
             ErrorManager.add(new CompilerError(
                     t.line, t.column, CompilerError.TYPE.SEMANTIC,
@@ -127,7 +145,7 @@ public class SemanticAnalyzer {
             return null;
         }
 
-        // Comprovar que el tipus és una descripció de tipus
+        // comprovar que el tipus és una descripció de tipus
         if(!(s.getDescripcio() instanceof DescripcioTipus dt)) {
             ErrorManager.add(new CompilerError(
                     t.line, t.column, CompilerError.TYPE.SEMANTIC,
@@ -211,6 +229,7 @@ public class SemanticAnalyzer {
                     "El tipus '" + tsb + "' no pot emprar-se per declarar una constant."
             ));
             decl.setHasError(true);
+            gest_expr(decl.getExpr());
             return;
         }
 
@@ -229,7 +248,8 @@ public class SemanticAnalyzer {
         }
 
 
-        Object valor;
+        Object valor = null;
+        /*
         if (assig instanceof LiteralNode lit) {
             valor = lit.getValue();
 
@@ -255,6 +275,8 @@ public class SemanticAnalyzer {
         } else {
             valor = null;
         }
+
+         */
 
 
         if (!decl.hasError()) {
@@ -283,7 +305,6 @@ public class SemanticAnalyzer {
 
         if (m.getType().hasError() || tipusRetorn == null) {
             m.setHasError(true);
-            return;
         }
 
         DescripcioProc descProc = new DescripcioProc(
@@ -292,11 +313,11 @@ public class SemanticAnalyzer {
                 m.getParams()
         );
 
-        Simbol sProc = new Simbol(m.getName(), descProc, currentScope.getScopeId());
+        Simbol sProc = new Simbol(m.getId(), descProc, currentScope.getScopeId());
         if (!currentScope.add(sProc)) {
             ErrorManager.add(new CompilerError(
                     m.line, m.column, CompilerError.TYPE.SEMANTIC,
-                    "Nom de subprograma ja utilitzat: " + m.getName()
+                    "Nom de subprograma ja utilitzat: " + m.getId()
             ));
             m.setHasError(true);
         }
@@ -328,13 +349,13 @@ public class SemanticAnalyzer {
 
         gest_instrs(m.getInstrs());
 
-        if (m.isFunction()) {
-            ExprNode retExpr = m.getReturnExpr();
+        if (m.isFunction() && tipusRetorn != null) {
+            ExprNode retExpr = m.getExpr();
 
             if (retExpr == null) {
                 ErrorManager.add(new CompilerError(
                         m.line, m.column, CompilerError.TYPE.SEMANTIC,
-                        "Falta l'expressió de retorn a la funció " + m.getName()
+                        "Falta l'expressió de retorn a la funció " + m.getId()
                 ));
                 m.setHasError(true);
             } else {
@@ -391,7 +412,6 @@ public class SemanticAnalyzer {
 
         if (ref.hasError()) {
             a.setHasError(true);
-            return;
         }
 
         switch (ref.getModeRef()) {
@@ -503,7 +523,10 @@ public class SemanticAnalyzer {
             ExprNode arg = args.get(i);
 
             gest_expr(arg);
-            if (arg.hasError()) c.setHasError(true);
+            if (arg.hasError()) {
+                c.setHasError(true);
+                return;
+            }
 
             Kind p_tsb = param.getType().getKind();
             Kind arg_tsb = arg.getKind();
@@ -725,14 +748,6 @@ public class SemanticAnalyzer {
             case DescripcioVar dVar -> {
                 tipus = dVar.getType();
                 mode = RefNode.ModeRef.VAR;
-
-                if (!dVar.getInitialized() && !isTuple(tipus)) {
-                    ErrorManager.add(new CompilerError(
-                            r.line, r.column, CompilerError.TYPE.SEMANTIC,
-                            "La variable '" + id + "' s'utilitza abans d'haver estat inicialitzada."
-                    ));
-                    r.setHasError(true);
-                }
             }
             case DescripcioArg dArg -> {
                 tipus = dArg.getType();
@@ -743,8 +758,12 @@ public class SemanticAnalyzer {
                 mode = RefNode.ModeRef.CONST;
             }
             case DescripcioProc dProc -> {
-                tipus = dProc.getType();
-                mode = RefNode.ModeRef.PROCF;
+                ErrorManager.add(new CompilerError(
+                        r.line, r.column, CompilerError.TYPE.SEMANTIC,
+                        "No es pot fer referència a un mètode sense paràmetres: " + id
+                ));
+                tipus = cercaTipus(Kind.UNKNOWN);
+                mode = RefNode.ModeRef.UNKNOWN;
             }
             case null, default -> {
                 ErrorManager.add(new CompilerError(
@@ -756,6 +775,7 @@ public class SemanticAnalyzer {
             }
         }
 
+        r.setKind(tipus.getTipusBase());
         r.setDescripcioTipus(tipus);
         r.setModeRef(mode);
 
@@ -821,6 +841,7 @@ public class SemanticAnalyzer {
 
         DescripcioTipus tipusCamp = campRecord.getTipus();
 
+        r.setKind(tipusCamp.getTipusBase());
         r.setDescripcioTipus(tipusCamp);
         r.setModeRef(base.getModeRef());
     }
@@ -870,7 +891,7 @@ public class SemanticAnalyzer {
                     ErrorManager.add(new CompilerError(
                             bin.line, bin.column, CompilerError.TYPE.SEMANTIC,
                             "Comparació entre tipus incompatibles: " +
-                                    tLeft.getNomTipus() + " i " + tRight.getNomTipus()
+                                    tLeft.getTipusBase() + " i " + tRight.getTipusBase()
                     ));
                     e.setHasError(true);
                 }
@@ -901,6 +922,7 @@ public class SemanticAnalyzer {
                 e.setHasError(true);
             }
 
+            e.setKind(resultat.getTipusBase());
             e.setDescripcioTipus(resultat);
             e.setMode(ExprNode.ModeExpr.MODERESULT);
             return;
@@ -955,6 +977,16 @@ public class SemanticAnalyzer {
             e.setDescripcioTipus(cercaTipus(Kind.UNKNOWN));
             e.setHasError(true);
         } else e.setDescripcioTipus(ref.getDescripcioTipus());
+
+        if (ref.getDesc() instanceof DescripcioVar dVar && !dVar.getInitialized()) {
+            if (!isTuple(ref.getDescripcioTipus())) {
+                ErrorManager.add(new CompilerError(
+                        ref.line, ref.column, CompilerError.TYPE.SEMANTIC,
+                        "La variable '" + ref.getId() + "' s'utilitza abans d'haver estat inicialitzada."
+                ));
+                e.setHasError(true);
+            }
+        }
 
         RefNode.ModeRef modeRef = (ref.getModeRef() != null) ? ref.getModeRef()
                 : RefNode.ModeRef.UNKNOWN;

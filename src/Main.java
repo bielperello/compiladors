@@ -10,7 +10,13 @@ public class Main {
             Parser parser = new Parser(lexer);
 
             Symbol result = parser.parse();
-            ProgramNode ast = (ProgramNode) result.value;
+            ProgramNode ast = null;
+
+            if(result == null || !(result.value instanceof ProgramNode)) {
+                System.err.println("Error: no s'ha pogut construir el programa.");
+            } else {
+                ast = (ProgramNode) result.value;
+            }
 
             ErrorManager.printErrors();
 

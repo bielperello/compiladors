@@ -25,7 +25,7 @@ public class DescripcioTipus extends Descripcio {
     public DescripcioTipus(String nomTipus, int limitInf, int limitSup, int ocupacio) {
         super(TDesc.DTIPUS);
         this.nomTipus = nomTipus;
-        this.tipusBase = Kind.DOUBLE;
+        this.tipusBase = Kind.ENTER;
         this.limitInf = limitInf;
         this.limitSup = limitSup;
         this.ocupacio = ocupacio;

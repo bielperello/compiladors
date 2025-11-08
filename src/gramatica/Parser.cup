@@ -51,12 +51,29 @@ parser code {:
     public void syntax_error(Symbol s) {
         int line = (s != null) ? s.left : -1;
         int column = (s != null) ? s.right : -1;
+
+        String tokenName = (s != null) ? ParserSym.terminalNames[s.sym] : "desconegut";
+
         String text = (s != null && s.value != null) ? s.value.toString() : "";
         ErrorManager.add(new CompilerError(
             line, column, CompilerError.TYPE.SINTACTIC,
-            "Error de sintaxi: token inesperat '" + text + "'"
+            "Error de sintaxi: token inesperat '" + tokenName + "'"
         ));
     }
+
+    @Override
+        public void unrecovered_syntax_error(Symbol s) {
+            int line = (s != null) ? s.left : -1;
+            int column = (s != null) ? s.right : -1;
+
+            String tokenName = (s != null) ? ParserSym.terminalNames[s.sym] : "desconegut";
+
+            String text = (s != null && s.value != null) ? s.value.toString() : "";
+            ErrorManager.add(new CompilerError(
+                line, column, CompilerError.TYPE.SINTACTIC,
+                "Error greu de sintaxi: token inesperat '" + tokenName + "'"
+            ));
+        }
 :}
 
 terminal Symbol
@@ -81,7 +98,6 @@ terminal Boolean VALOR_LOGIC;
 
 non terminal ProgramNode program;
 non terminal List<DeclNode> decls;
-non terminal List<MethodNode> methods;
 non terminal List<InstrNode> instrs, optional_cond;
 non terminal DeclNode decl;
 non terminal InstrNode instr,  entrada, sortida;
@@ -115,12 +131,14 @@ precedence right NOT;          // negació (NOT) té associativitat a la dreta
 
 start with program;
 
-program ::= PRINCIPAL:p ID:id DOS_PUNTS INICI decls:d methods:m FI instrs:i ENDPRINCIPAL
-            {: RESULT = new ProgramNode(id, d, m, i, pleft, pright); :}
+program ::= PRINCIPAL:p ID:id DOS_PUNTS decls:d INICI instrs:i FI ENDPRINCIPAL
+            {: RESULT = new ProgramNode(id, d, i, pleft, pright); :}
 ;
 
 decls ::= decl:d decls:ds
             {: RESULT = combinar(d, ds); :}
+        | method:m decls:ds
+            {: RESULT = combinar(m, ds); :}
         | error:e decls:ds
             {:
                 ErrorManager.add(new CompilerError(
@@ -137,20 +155,6 @@ decl ::= tipus:t ID:id assig:a
             {: RESULT = new DeclNode(t, id, a, false, t.line, t.column); :}
         | CONST:c tipus:t ID:id ASSIGNACIO expr:e
             {: RESULT = new DeclNode(t, id, e, true, t.line, t.column); :}
-;
-
-methods ::= method:m methods:ms
-            {: RESULT = combinar(m, ms); :}
-        | error:e methods:ds
-            {:
-                ErrorManager.add(new CompilerError(
-                    eleft, eright, CompilerError.TYPE.SINTACTIC,
-                    "Error sintàctic: subprograma ignorat."
-                ));
-                RESULT = ds;
-            :}
-        | /* buit */
-            {: RESULT = new ArrayList<MethodNode>(); :}
 ;
 
 method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS instrs:i TORNAR expr:e ENDFUNCIO

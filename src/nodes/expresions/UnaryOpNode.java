@@ -18,12 +18,6 @@ public class UnaryOpNode extends ExprNode {
     public ExprNode getExpr() { return expr; }
     public String getOperator() { return operator; }
 
-    public static TypeNode.Kind inferKind(String op, TypeNode.Kind operand) {
-        if (op.equals("NOT"))
-            return operand == TypeNode.Kind.LOGIC ? TypeNode.Kind.LOGIC : TypeNode.Kind.UNKNOWN;
-        return operand;
-    }
-
     @Override
     public void generateCode() {
         expr.generateCode();
