@@ -183,7 +183,7 @@ public class SemanticAnalyzer {
         DescripcioTipus descTupla = new DescripcioTipus(nomTupla, Kind.TUPLA, 0);
 
         // Construir els camps
-        List<DescripcioTipus.CampRecord> camps = new ArrayList<>();
+        List<DescripcioCamp> camps = new ArrayList<>();
         Set<String> nomsCamps = new HashSet<>();
         int offset = 0;
 
@@ -209,7 +209,7 @@ public class SemanticAnalyzer {
             }
 
             // Afegir el camp a la descripció de camp corresponent, juntament amb el desplaçament
-            camps.add(new DescripcioTipus.CampRecord(camp.getName(), dt, offset));
+            camps.add(new DescripcioCamp(camp.getName(), dt, offset));
             offset += dt.getOcupacio();
         }
 
@@ -270,7 +270,7 @@ public class SemanticAnalyzer {
 
 
         Object valor = null;
-        /*
+
         if (assig instanceof LiteralNode lit) {
             valor = lit.getValue();
 
@@ -285,7 +285,7 @@ public class SemanticAnalyzer {
         } else if (assig instanceof RefNode r) {
             Simbol sr = currentScope.lookUp(r.getId());
 
-            if(!(sr.getDescripcio() instanceof DescripcioConst dc)) {
+            if(!(sr.getDescripcio() instanceof DescripcioConst)) {
                 ErrorManager.add(new CompilerError(decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
                         " "));
                 decl.setHasError(true);
@@ -293,11 +293,8 @@ public class SemanticAnalyzer {
 
             DescripcioConst dc = (DescripcioConst) sr.getDescripcio();
             valor = dc.getValor();
-        } else {
-            valor = null;
         }
 
-         */
         if(decl.hasError()) return;
 
         // Afegir la declaració si tot és correcte
@@ -835,9 +832,9 @@ public class SemanticAnalyzer {
         }
 
         // cercar el camp dins la tupla
-        DescripcioTipus.CampRecord campRecord = null;
-        for (DescripcioTipus.CampRecord c : tipusBase.getCamps()) {
-            if (c.getNom().equals(campNom)) {
+        DescripcioCamp campRecord = null;
+        for (DescripcioCamp c : tipusBase.getCamps()) {
+            if (c.getName().equals(campNom)) {
                 campRecord = c;
                 break;
             }
@@ -855,7 +852,7 @@ public class SemanticAnalyzer {
             return;
         }
 
-        DescripcioTipus tipusCamp = campRecord.getTipus();
+        DescripcioTipus tipusCamp = campRecord.getType();
 
         r.setKind(tipusCamp.getTipusBase());
         r.setDescripcioTipus(tipusCamp);

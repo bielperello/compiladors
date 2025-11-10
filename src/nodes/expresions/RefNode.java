@@ -16,7 +16,6 @@ public class RefNode extends ExprNode {
     }
 
     private final String id;             // identificador base
-    private final ExprNode indexOpt;     // índex o accés opcional
     private Descripcio desc;             // descripció de la referència corresponent
     private ModeRef modeRef;             // mode de la referència
     private DescripcioTipus tipus;       // descripció de tipus associada
@@ -27,34 +26,34 @@ public class RefNode extends ExprNode {
     public RefNode(String id, int line, int column) {
         super(line, column);
         this.id = id;
-        this.indexOpt = null;
         this.modeRef = null;
     }
 
     public RefNode(String id, ExprNode indexOpt, int line, int column) {
         super(line, column);
         this.id = id;
-        this.indexOpt = indexOpt;
         this.modeRef = null;
     }
 
-
     public String getId() { return this.id; }
-    public ExprNode getIndexOpt() { return this.indexOpt; }
     public Descripcio getDesc() { return this.desc; }
     public ModeRef getModeRef() { return this.modeRef; }
     public DescripcioTipus getDescripcioTipus() { return this.tipus; }
+    public int getBaseVar() { return this.baseVar; }
+    public int getOffsetVar() { return this.offsetVar; }
 
     public void setDesc(Descripcio desc) { this.desc = desc; }
     public void setModeRef(ModeRef modeRef) { this.modeRef = modeRef; }
     public void setDescripcioTipus(DescripcioTipus tipus) { this.tipus = tipus; }
+    public void setBaseVar(int baseVar) { this.baseVar = baseVar; }
+    public void setOffsetVar(int offsetVar) { this.offsetVar = offsetVar; }
 
 
     public static class CampAccessNode extends RefNode {
         private final RefNode base;
 
         public CampAccessNode(RefNode base, String field, int line, int column) {
-            super(field, null, line, column);
+            super(field, line, column);
             this.base = base;
         }
 
@@ -62,7 +61,14 @@ public class RefNode extends ExprNode {
 
         @Override
         public void generateCode() {
-            base.generateCode();
+            // --- R0 → R1.id
+            base.generateCode(); // generar el codi de la base (R1)
+
+            DescripcioTipus d = (DescripcioTipus) this.getDesc();
+            DescripcioCamp dc = d.getCamp(this.getId());
+
+            this.setBaseVar(base.getBaseVar()); // R0.r = R1.r
+            this.setOffsetVar(base.getOffsetVar() + dc.getDesplaçament()); // R0.d = R1.d + d
         }
     }
 
@@ -78,25 +84,14 @@ public class RefNode extends ExprNode {
         }
         offsetVar = CodeGenerator.NUL_VAL;  // R.d = nul_val
 
-        // --- E → R ---
-        if (indexOpt != null) { // si R.d ≠ nul_val (té índex)
-            indexOpt.generateCode(); // genera índex
-            offsetVar = indexOpt.getResultVar(); // R.d = E(i).r
-
-            int t = CodeGenerator.novaVarTemporal();  // t = novavar
-            CodeGenerator.genera(OpCode.IND_VAL, baseVar, offsetVar, t); // t = R.r[R.d]
-            baseVar = t;
-            offsetVar = CodeGenerator.NUL_VAL;
-        }
-
-        this.resultVar = baseVar; // E.r = R.r si era simple / E.r = R.r = t = R.r[R.d] si era compost
+        // --- E → R
+        this.resultVar = baseVar; // E.r = R.r si era simple
     }
 
 
     @Override
     public String toString() {
-        String idx = (indexOpt != null) ? "[" + indexOpt + "]" : "";
-        return "Ref(" + id + idx + ", mode=" + modeRef + ", tipus=" +
+        return "Ref(" + id + ", mode=" + modeRef + ", tipus=" +
                 (tipus != null ? tipus.getNomTipus() : "??") + ")";
     }
 }

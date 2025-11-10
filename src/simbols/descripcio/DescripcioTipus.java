@@ -11,7 +11,7 @@ public class DescripcioTipus extends Descripcio {
     private Integer limitInf;               // Límits per a enters
     private Integer limitSup;
     private DescripcioTipus tipusElemental; // Tipus dels elements (si és un array)
-    private List<CampRecord> camps;         // Camps (si és una tupla)
+    private List<DescripcioCamp> camps;         // Camps (si és una tupla)
 
     // Constructor bàsic per a tipus simples (enter, booleà, caracter...)
     public DescripcioTipus(String nomTipus, Kind tipusBase, int ocupacio) {
@@ -41,7 +41,7 @@ public class DescripcioTipus extends Descripcio {
     }
 
     // Constructor per a records
-    public DescripcioTipus(String nomTipus, List<CampRecord> camps, int ocupacio) {
+    public DescripcioTipus(String nomTipus, List<DescripcioCamp> camps, int ocupacio) {
         super(TDesc.DTIPUS);
         this.nomTipus = nomTipus;
         this.tipusBase = Kind.TUPLA;
@@ -56,24 +56,18 @@ public class DescripcioTipus extends Descripcio {
     public Integer getLimitInf() { return limitInf; }
     public Integer getLimitSup() { return limitSup; }
     public DescripcioTipus getTipusElemental() { return tipusElemental; }
-    public List<CampRecord> getCamps() { return camps; }
+    public List<DescripcioCamp> getCamps() { return camps; }
 
-    public void setCamps(List<CampRecord> c) { this.camps = c; }
-    public void setOcupacio(int ocupacio) {this.ocupacio = ocupacio; }
-
-    public static class CampRecord {
-        private final String nom;
-        private final DescripcioTipus tipus;
-        private final int desplacament;
-
-        public CampRecord(String nom, DescripcioTipus tipus, int desplacament) {
-            this.nom = nom;
-            this.tipus = tipus;
-            this.desplacament = desplacament;
+    public DescripcioCamp getCamp(String nomCamp) {
+        for(DescripcioCamp camp : camps) {
+            if (camp.getName().equals(nomCamp)) {
+                return camp;
+            }
         }
 
-        public String getNom() { return nom; }
-        public DescripcioTipus getTipus() { return tipus; }
-        public int getDesplacament() { return desplacament; }
+        return null;
     }
+
+    public void setCamps(List<DescripcioCamp> c) { this.camps = c; }
+    public void setOcupacio(int ocupacio) {this.ocupacio = ocupacio; }
 }
