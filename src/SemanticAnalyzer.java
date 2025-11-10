@@ -44,7 +44,7 @@ public class SemanticAnalyzer {
     }
 
     // ─────────────────────────────────────────────
-    // Declaracions globals
+    // Declaracions
     // ─────────────────────────────────────────────
     public void gest_decls(List<DeclNode> decls) {
         if (decls == null) return;
@@ -54,40 +54,43 @@ public class SemanticAnalyzer {
         }
     }
 
+    // DECL -> TIPUS ID ASSIG | CONST TIPUS ID := E
     public void gest_decl(DeclNode decl) {
         if (decl == null) return;
 
-        // gestió concreta si la declaració és de tipus TUPLA
+        // Gestió concreta si la declaració és de tipus TUPLA
         if (decl.getType().getKind() == Kind.TUPLA) {
             novaTupla(decl);
             return;
         }
 
-        // gestió del tipus de la variable a declarar
+        // Gestió del tipus de la variable a declarar
         TypeNode type = decl.getType();
         DescripcioTipus dt = gest_type(type);
 
-        // comprovar si el tipus té error
+        // Comprovar si el tipus té error
         if (type.hasError() || dt == null) {
-            // propagació d'errors
+            // Propagació d'errors
             decl.setHasError(true);
-            // gestionar l'expressió per observar tots els errors possibles
+
+            // Gestionar l'expressió per observar tots els errors possibles
             gest_expr(decl.getExpr());
             return;
         }
 
-        // gestió concreta d'una declaració constant
+        // Gestió concreta d'una declaració constant
         if (decl.isConst()) {
             gest_decl_const(decl, dt);
             return;
         }
 
-        //
         Kind tsb = dt.getTipusBase();
+
+        // Analitzar l'expressió d'assignació
         ExprNode assig = decl.getExpr();
         gest_expr(assig);
 
-        // comprovar si el tipus de la variable a declarar és de tipus usuari (tupla declarada)
+        // Comprovar si el tipus de la variable a declarar és de tipus usuari (tupla declarada)
         if (decl.getType().getKind() == Kind.USER && assig != null) {
             ErrorManager.add(new CompilerError(
                     decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
@@ -98,6 +101,7 @@ public class SemanticAnalyzer {
             return;
         }
 
+        // Si hi ha assignació
         if (assig != null) {
             if (assig.hasError()) {
                 // propagació d'errors
@@ -105,7 +109,7 @@ public class SemanticAnalyzer {
                 return;
             }
 
-            // comprovar si són compatibles el tipus de la variable i de l'expressió
+            // Comprovar si són compatibles el tipus de la variable i de l'expressió
             Kind a_tsb = assig.getKind();
             if (!TipusUtils.sonCompatibles(a_tsb, tsb)) {
                 ErrorManager.add(new CompilerError(
@@ -116,12 +120,13 @@ public class SemanticAnalyzer {
             }
         }
 
-        // crear una nova descripció de variable amb el tipus corresponent
+        // Crear una nova descripció de variable amb el tipus corresponent
         DescripcioVar dv = new DescripcioVar(dt);
-        // si té una expressió assignada marcar com a inicialitzada
+
+        // Si té una expressió assignada marcar com a inicialitzada
         if (assig != null) dv.setInitialized(true);
 
-        // afegir la variable a la taula de símbols
+        // Afegir la variable a la taula de símbols
         if (!currentScope.add(new Simbol(decl.getId(), dv, currentScope.getScopeId()))) {
             ErrorManager.add(new CompilerError(
                     decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
@@ -131,11 +136,12 @@ public class SemanticAnalyzer {
         }
     }
 
+    // TIPUS -> ENTER | CADENA | CARÀCTER | LOGIC | TUPLA | ID
     private DescripcioTipus gest_type(TypeNode t) {
-        // cercar el nom del tipus a la taula de símbols
+        // Cercar el nom del tipus a la taula de símbols
         Simbol s = currentScope.lookUp(t.getLookupName());
 
-        // comprovar si el tipus existeix
+        // Comprovar si el tipus existeix
         if (s == null) {
             ErrorManager.add(new CompilerError(
                     t.line, t.column, CompilerError.TYPE.SEMANTIC,
@@ -145,7 +151,7 @@ public class SemanticAnalyzer {
             return null;
         }
 
-        // comprovar que el tipus és una descripció de tipus
+        // Comprovar que el tipus és una descripció de tipus
         if(!(s.getDescripcio() instanceof DescripcioTipus dt)) {
             ErrorManager.add(new CompilerError(
                     t.line, t.column, CompilerError.TYPE.SEMANTIC,
@@ -158,10 +164,12 @@ public class SemanticAnalyzer {
         return dt;
     }
 
+    // DECL -> TUPLA ( ARGS [CAMPS] ) ID
     private void novaTupla(DeclNode decl) {
         TypeNode tipusNode = decl.getType();
         String nomTupla = decl.getId();
 
+        // Comprovar que no hi ha assignació a la tupla (tupla {camps} id)
         if (decl.getExpr() != null) {
             ErrorManager.add(new CompilerError(
                     decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
@@ -171,42 +179,48 @@ public class SemanticAnalyzer {
             return;
         }
 
-        // crear descripció base
+        // Crear la descripció base de tupla
         DescripcioTipus descTupla = new DescripcioTipus(nomTupla, Kind.TUPLA, 0);
 
-        // construir camps
+        // Construir els camps
         List<DescripcioTipus.CampRecord> camps = new ArrayList<>();
         Set<String> nomsCamps = new HashSet<>();
         int offset = 0;
 
+        // Recórrer els camps declarats al tipus
         for (ArgNode camp : tipusNode.getFields()) {
+            // evitar camps duplicats
             if (!nomsCamps.add(camp.getName())) {
                 ErrorManager.add(new CompilerError(
                         camp.line, camp.column, CompilerError.TYPE.SEMANTIC,
                         "Camp duplicat '" + camp.getName() + "' dins la tupla '" + nomTupla + "'."
                 ));
                 decl.setHasError(true);
-                continue;
+                return;
             }
 
+            // Emmagatzemar el tipus del camp
             DescripcioTipus dt = gest_type(camp.getType());
 
+            // Comprovar que el tipus no tengui error
             if(camp.getType().hasError() || dt == null) {
                 decl.setHasError(true);
                 return;
             }
 
+            // Afegir el camp a la descripció de camp corresponent, juntament amb el desplaçament
             camps.add(new DescripcioTipus.CampRecord(camp.getName(), dt, offset));
             offset += dt.getOcupacio();
         }
 
         if (decl.hasError()) return;
 
+        // Afegir els camps a la descripció de la tupla, juntament amb el desplaçament
         descTupla.setCamps(camps);
         descTupla.setOcupacio(offset > 0 ? offset : 1);
 
-        Simbol s = new Simbol(nomTupla, descTupla, currentScope.getScopeId());
-        if (!currentScope.add(s)) {
+        // Afegir la tupla a la taula de símbols
+        if (!currentScope.add(new Simbol(nomTupla, descTupla, currentScope.getScopeId()))) {
             ErrorManager.add(new CompilerError(
                     decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
                     "La tupla '" + decl.getId() + "' ja ha estat declarada."
@@ -222,8 +236,7 @@ public class SemanticAnalyzer {
         Kind tsb = dt.getTipusBase();
 
         // Comprovar que el tipus és l'adequat
-        if (tsb != Kind.ENTER && tsb != Kind.CADENA && tsb != Kind.CARACTER
-                && tsb != Kind.LOGIC) {
+        if (tsb != Kind.ENTER && tsb != Kind.CADENA && tsb != Kind.CARACTER && tsb != Kind.LOGIC) {
             ErrorManager.add(new CompilerError(
                     decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
                     "El tipus '" + tsb + "' no pot emprar-se per declarar una constant."
@@ -233,8 +246,16 @@ public class SemanticAnalyzer {
             return;
         }
 
-        // Analitzar l'expressió associada
+        // Analitzar l'expressió associada a la constant
         ExprNode assig = decl.getExpr();
+
+        if(assig == null) {
+            ErrorManager.add(new CompilerError(decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
+                    "S'ha d'assignar valor a la constant: " + decl.getId()));
+            decl.hasError();
+            return;
+        }
+
         gest_expr(assig);
         Kind a_tsb = assig.getKind();
 
@@ -277,29 +298,24 @@ public class SemanticAnalyzer {
         }
 
          */
+        if(decl.hasError()) return;
 
-
-        if (!decl.hasError()) {
-            // Afegir la declaració si tot és correcte
-            DescripcioConst dc = new DescripcioConst(dt, valor);
-            if (!currentScope.add(new Simbol(decl.getId(), dc, currentScope.getScopeId()))) {
-                ErrorManager.add(new CompilerError(
-                        decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
-                        "La constant '" + decl.getId() + "' ja ha estat declarada."
-                ));
-                decl.setHasError(true);
-            }
+        // Afegir la declaració si tot és correcte
+        DescripcioConst dc = new DescripcioConst(dt, valor);
+        if (!currentScope.add(new Simbol(decl.getId(), dc, currentScope.getScopeId()))) {
+            ErrorManager.add(new CompilerError(
+                    decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
+                    "La constant '" + decl.getId() + "' ja ha estat declarada."
+            ));
+            decl.setHasError(true);
         }
     }
 
 
-    public void gest_methods(List<MethodNode> methods) {
-        if (methods == null) return;
-        for (MethodNode method : methods) gest_method(method);
-    }
-
     public void gest_method(MethodNode m) {
         if (m == null) return;
+
+        gest_decls(m.getDecls());
 
         DescripcioTipus tipusRetorn = gest_type(m.getType());
 

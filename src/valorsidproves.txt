@@ -1,11 +1,4 @@
 principal prova1 :
-    funcio enter suma(x:enter, y:enter):
-        tornar x + y
-    fifuncio
-
-
-
-    inici
-        enter x := 10
-    fi
+    enter x := 20
+    const enter y := 40
 fprincipal

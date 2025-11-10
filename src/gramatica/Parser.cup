@@ -97,7 +97,7 @@ terminal Double ENTER;
 terminal Boolean VALOR_LOGIC;
 
 non terminal ProgramNode program;
-non terminal List<DeclNode> decls;
+non terminal List<DeclNode> decls, safe_decls;
 non terminal List<InstrNode> instrs, optional_cond;
 non terminal DeclNode decl;
 non terminal InstrNode instr,  entrada, sortida;
@@ -107,7 +107,7 @@ non terminal CaseNode cas_opcio;
 non terminal LoopNode loop;
 non terminal MethodNode method;
 non terminal TypeNode tipus;
-non terminal ExprNode assig, expr, terme, index_opt;
+non terminal ExprNode assig, expr, terme, return_func;
 non terminal LiteralNode literal;
 non terminal ExprNode expr_logic, expr_rel, expr_arit;
 non terminal RefNode ref;
@@ -131,22 +131,26 @@ precedence right NOT;          // negació (NOT) té associativitat a la dreta
 
 start with program;
 
-program ::= PRINCIPAL:p ID:id DOS_PUNTS decls:d INICI instrs:i FI ENDPRINCIPAL
+program ::= PRINCIPAL:p ID:id DOS_PUNTS safe_decls:d instrs:i ENDPRINCIPAL
             {: RESULT = new ProgramNode(id, d, i, pleft, pright); :}
+;
+
+safe_decls ::= decls:d
+            {: RESULT = d; :}
+        | error:e decls:d
+            {:
+                ErrorManager.add(new CompilerError(
+                    eleft, eright, CompilerError.TYPE.SINTACTIC,
+                    "Error sintàctic: declaració ignorada."
+                ));
+                RESULT = d;
+            :}
 ;
 
 decls ::= decl:d decls:ds
             {: RESULT = combinar(d, ds); :}
         | method:m decls:ds
             {: RESULT = combinar(m, ds); :}
-        | error:e decls:ds
-            {:
-                ErrorManager.add(new CompilerError(
-                    eleft, eright, CompilerError.TYPE.SINTACTIC,
-                    "Error sintàctic: declaració ignorada."
-                ));
-                RESULT = ds;
-            :}
         | /* buit */
             {: RESULT = new ArrayList<DeclNode>(); :}
 ;
@@ -157,14 +161,18 @@ decl ::= tipus:t ID:id assig:a
             {: RESULT = new DeclNode(t, id, e, true, t.line, t.column); :}
 ;
 
-method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS instrs:i TORNAR expr:e ENDFUNCIO
-            {: RESULT = new MethodNode(true, id, t, a, i, e, fleft, fright); :}
-        | PROCEDIMENT:p ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS instrs:i ENDPROCEDIMENT
+method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS safe_decls:d instrs:i return_func:r ENDFUNCIO
+            {: RESULT = new MethodNode(true, id, t, a, d, i, r, fleft, fright); :}
+        | PROCEDIMENT:p ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS safe_decls:d instrs:i ENDPROCEDIMENT
             {: RESULT = new MethodNode(false, id, new TypeNode(Kind.VOID, pleft, pright),
-                                      a, i, null, pleft, pright); :}
+                                      a, d, i, null, pleft, pright); :}
 ;
 
-instrs ::= instr:i instrs:is
+return_func ::= TORNAR expr:e
+            {: RESULT = e; :}
+;
+
+instrs ::= INICI instr:i instrs:is
             {: RESULT = combinar(i, is); :}
         | error:e instrs:ds
                 {:
@@ -174,6 +182,8 @@ instrs ::= instr:i instrs:is
                     ));
                     RESULT = ds;
                 :}
+        | FI
+            {: RESULT = new ArrayList<InstrNode>(); :}
         | /* buit */
             {: RESULT = new ArrayList<InstrNode>(); :}
 ;
