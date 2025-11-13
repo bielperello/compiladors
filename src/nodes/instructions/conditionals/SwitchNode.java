@@ -1,5 +1,8 @@
 package nodes.instructions.conditionals;
 
+import codegen.CodeGenerator;
+import codegen.EtiquetaManager;
+import codegen.OpCode;
 import nodes.instructions.InstrNode;
 import nodes.expresions.ExprNode;
 
@@ -24,5 +27,23 @@ public class SwitchNode extends CondNode {
     public List<InstrNode> getDefaultInstrs() { return this.defaultInstrs; }
 
     @Override
-    public void generateCode(){}
+    public void generateCode(){
+        // --- CAS E : CAS_OPCIONS ALTRE : instrs:i FCAS
+        expr.generateCode(); // genera el codi de l'expressió
+
+        int exprVar = expr.getResultVar(); // exprVar = E0.r
+        int efi = EtiquetaManager.novaEtiqueta("E"); // etiqueta pel final del 'switch'
+
+        for(CaseNode caseNode : cases) {
+            caseNode.generateCaseCode(exprVar, efi); // gestió interna de cada cas
+        }
+
+        if(!defaultInstrs.isEmpty()) {
+            for(InstrNode instrNode : defaultInstrs) {
+                instrNode.generateCode(); // genera el codi de cada instrucció del default
+            }
+        }
+
+        CodeGenerator.posaEtiqueta(efi); // efi: skip
+    }
 }

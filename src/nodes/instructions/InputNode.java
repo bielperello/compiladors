@@ -1,5 +1,7 @@
 package nodes.instructions;
 
+import codegen.CodeGenerator;
+import codegen.OpCode;
 import nodes.expresions.RefNode;
 
 public class InputNode extends InstrNode {
@@ -13,5 +15,19 @@ public class InputNode extends InstrNode {
     public RefNode getRef() { return this.ref; }
 
     @Override
-    public void generateCode() {}
+    public void generateCode() {
+        ref.generateCode(); // generar el codi de la referència (R)
+
+        int base = ref.getBaseVar();
+        int offset = ref.getOffsetVar();
+
+        int t = CodeGenerator.novaVarTemporal(); // t = novavar
+        CodeGenerator.genera(OpCode.READ, t);
+
+        if (offset != CodeGenerator.NUL_VAL && offset != 0) {
+            CodeGenerator.genera(OpCode.IND_ASS, t, offset, base);
+        } else {
+            CodeGenerator.genera(OpCode.COPY, t, base);
+        }
+    }
 }

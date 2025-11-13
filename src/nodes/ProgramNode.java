@@ -24,6 +24,7 @@ public class ProgramNode extends Node {
 
     @Override
     public void generateCode() {
-
+        for(DeclNode decl : decls) decl.generateCode();
+        for(InstrNode instr : instrs) instr.generateCode();
     }
 }

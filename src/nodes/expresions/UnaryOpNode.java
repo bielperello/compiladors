@@ -20,20 +20,23 @@ public class UnaryOpNode extends ExprNode {
 
     @Override
     public void generateCode() {
-        expr.generateCode();
+        expr.generateCode(); // genera el codi de l'expressió E1
 
-        int operandVar = expr.getResultVar(); // E1.r
+        switch (operator) {
+            case "not" -> {
+                // intercanvi de llistes cert/fals
+                this.trueList = expr.getFalseList();
+                this.falseList = expr.getTrueList();
+            }
 
-        int t = CodeGenerator.novaVarTemporal(); // t = novavar
+            case "-" -> {
+                int operandVar = expr.getResultVar(); // E1.r
+                int t = CodeGenerator.novaVarTemporal(); // t = novavar
+                CodeGenerator.genera(OpCode.NEG, operandVar, CodeGenerator.NUL_VAL, t); // t = op E1.r
 
-        OpCode opCode = switch (operator) {
-            case "not" -> OpCode.NOT;
-            case "-" -> OpCode.NEG;
+                this.resultVar = t; // E0.r = t
+            }
             default -> throw new RuntimeException("Operador unari no suportat: " + operator);
         };
-
-        CodeGenerator.genera(opCode, operandVar, CodeGenerator.NUL_VAL, t); // t = op E1.r
-
-        this.resultVar = t; // E0.r = t
     }
 }

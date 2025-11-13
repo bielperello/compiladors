@@ -6,5 +6,6 @@ public enum OpCode {
     IND_VAL, IND_ASS,
     IF_LT, IF_LE, IF_EQ, IF_NE, IF_GE, IF_GT,
     GOTO, SKIP,
-    PARAM_S, PARAM_C, CALL, RTN, PMB
+    PARAM_S, PARAM_C, CALL, RTN, PMB,
+    WRT, READ
 }

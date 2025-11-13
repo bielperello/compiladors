@@ -1,8 +1,8 @@
 package nodes.expresions;
 
-import codegen.CodeGenerator;
-import codegen.EtiquetaManager;
-import codegen.OpCode;
+import codegen.*;
+
+import java.util.List;
 
 /** Operador binari (+, -, i, o, ==, <, etc.) */
 public class BinaryOpNode extends ExprNode {
@@ -24,51 +24,75 @@ public class BinaryOpNode extends ExprNode {
 
     @Override
     public void generateCode() {
-        left.generateCode();
-        right.generateCode();
+        if (operator.equals("i") || operator.equals("o")) {
+            left.generateCode();
 
-        int leftVar = left.getResultVar();   // E1.r
-        int rightVar = right.getResultVar(); // E2.r
-        int t = CodeGenerator.novaVarTemporal(); // t = novavar
+            int m1 = EtiquetaManager.novaEtiqueta("M"); // etiqueta marcador M1 (continuar amb la comprovació)
+            CodeGenerator.posaEtiqueta(m1);
 
-        // Distingeix entre tipus d’operadors
-        switch (operator) {
-            // --- Operacions aritmètiques ---
-            case "+" -> CodeGenerator.genera(OpCode.ADD, leftVar, rightVar, t);
-            case "-" -> CodeGenerator.genera(OpCode.SUB, leftVar, rightVar, t);
-            case "*" -> CodeGenerator.genera(OpCode.PROD, leftVar, rightVar, t);
-            case "/" -> CodeGenerator.genera(OpCode.DIV, leftVar, rightVar, t);
+            right.generateCode();
 
-            // --- Operacions lògiques ---
-            case "i" -> CodeGenerator.genera(OpCode.AND, leftVar, rightVar, t);
-            case "o" -> CodeGenerator.genera(OpCode.OR, leftVar, rightVar, t);
+            switch (operator) {
+                case "i" -> {
+                    CodeGenerator.backpatch(left.getTrueList(), m1);
 
-            // --- Operacions relacionals ---
-            case "==", "!=", "<", "<=", ">", ">=" -> {
-                int eTrue = EtiquetaManager.novaEtiqueta("E");  // etiqueta per al cas cert
-                int eEnd  = EtiquetaManager.novaEtiqueta("E");  // etiqueta final
+                    this.falseList = CodeGenerator.concat(left.getFalseList(), right.getFalseList());
+                    this.trueList = right.getTrueList();
+                }
 
-                OpCode relOp = switch (operator) {
-                    case "==" -> OpCode.IF_EQ;
-                    case "!=" -> OpCode.IF_NE;
-                    case "<"  -> OpCode.IF_LT;
-                    case "<=" -> OpCode.IF_LE;
-                    case ">"  -> OpCode.IF_GT;
-                    case ">=" -> OpCode.IF_GE;
-                    default -> throw new RuntimeException("Operador relacional desconegut: " + operator);
-                };
+                case "o" -> {
+                    CodeGenerator.backpatch(left.getFalseList(), m1);
 
-                CodeGenerator.genera(relOp, leftVar, rightVar, eTrue);  // if E1.r op E2.r goto eTrue
-                CodeGenerator.genera(OpCode.COPY, "0", t); // t = 0  (fals)
-                CodeGenerator.genera(OpCode.GOTO, eEnd); // goto eEnd
-                CodeGenerator.posaEtiqueta(eTrue); // genera SKIP amb id eTrue
-                CodeGenerator.genera(OpCode.COPY, "-1", t); // t = -1 (cert)
-                CodeGenerator.posaEtiqueta(eEnd);  // genera SKIP amb id eEnd
+                    this.trueList = CodeGenerator.concat(left.getTrueList(), right.getTrueList());
+                    this.falseList = right.getFalseList();
+                }
             }
+        } else {
+            left.generateCode();
+            right.generateCode();
 
-            default -> throw new RuntimeException("Operador no suportat: " + operator);
+            int leftVar = left.getResultVar();   // E1.r
+            int rightVar = right.getResultVar(); // E2.r
+
+            // Distingeix entre tipus d’operadors
+            switch (operator) {
+                // --- Operacions aritmètiques ---
+                case "+", "-", "*", "/" -> {
+                    int t = CodeGenerator.novaVarTemporal(); // t = novavar
+                    OpCode op = switch (operator) {
+                        case "+" -> OpCode.ADD;
+                        case "-" -> OpCode.SUB;
+                        case "*" -> OpCode.PROD;
+                        case "/" -> OpCode.DIV;
+                        default -> throw new RuntimeException("Operador aritmètic no suportat: " + operator);
+                    };
+                    CodeGenerator.genera(op, leftVar, rightVar, t);
+                    this.resultVar = t; // E0.r = t
+                }
+
+                // --- Operacions relacionals (backpatching) ---
+                case "==", "!=", "<", "<=", ">", ">=" -> {
+                    OpCode op = switch (operator) {
+                        case "==" -> OpCode.IF_EQ;
+                        case "!=" -> OpCode.IF_NE;
+                        case "<"  -> OpCode.IF_LT;
+                        case "<=" -> OpCode.IF_LE;
+                        case ">"  -> OpCode.IF_GT;
+                        case ">=" -> OpCode.IF_GE;
+                        default -> throw new RuntimeException("Operador relacional desconegut: " + operator);
+                    };
+
+                    CodeGenerator.genera(op, leftVar, rightVar, CodeGenerator.NUL_VAL); // if E1.r op E2.r goto ???
+                    int posIf = CodeGenerator.pc();
+
+                    CodeGenerator.genera(OpCode.GOTO, CodeGenerator.NUL_VAL); // goto ???
+                    int posGoto = CodeGenerator.pc();
+
+                    // crea les llistes de pendents
+                    this.trueList = List.of(posIf);
+                    this.falseList = List.of(posGoto);
+                }
+            }
         }
-
-        this.resultVar = t; // E0.r = t
     }
 }

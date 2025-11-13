@@ -35,8 +35,6 @@ public class TypeNode extends Node {
     public String getCustomTypeName() { return this.customTypeName; }
     public List<ArgNode> getFields() { return this.fields; }
 
-    public void setCustomTypeName(String customTypeName) { this.customTypeName = customTypeName; }
-
     @Override
     public void generateCode() {}
 

@@ -1,5 +1,6 @@
 package nodes.instructions.loops;
 
+import codegen.*;
 import nodes.instructions.InstrNode;
 import nodes.expresions.ExprNode;
 
@@ -20,6 +21,20 @@ public class DoWhileNode extends LoopNode {
 
     @Override
     public void generateCode() {
-        // pseudocodi per generar el do-while
+        int m1 = EtiquetaManager.novaEtiqueta("M"); // etiqueta marcador M1 ( cos del bucle )
+        int eFi = EtiquetaManager.novaEtiqueta("E"); // etiqueta final de sentència
+
+        CodeGenerator.posaEtiqueta(m1); // m1: skip
+
+        for(InstrNode instr : body) {
+            instr.generateCode(); // genera el codi de cada instrucció dins el cos del bucle
+        }
+
+        condition.generateCode(); // genera el codi de l'expressió (E)
+
+        CodeGenerator.backpatch(condition.getTrueList(), m1);
+        CodeGenerator.backpatch(condition.getFalseList(), eFi);
+
+        CodeGenerator.posaEtiqueta(eFi); // eFi: skip
     }
 }

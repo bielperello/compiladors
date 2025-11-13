@@ -17,6 +17,6 @@ public class ArgNode extends Node{
 
     @Override
     public void generateCode() {
-        System.out.println(type + " " + id);
+
     }
 }

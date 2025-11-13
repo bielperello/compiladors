@@ -4,12 +4,16 @@ public class Instruction {
     public final OpCode op;
     public final int arg1;
     public final int arg2;
-    public final int dest;
+    public int dest;
 
     public Instruction(OpCode op, int arg1, int arg2, int dest) {
         this.op = op;
         this.arg1 = arg1;
         this.arg2 = arg2;
+        this.dest = dest;
+    }
+
+    public void setDest(int dest) {
         this.dest = dest;
     }
 

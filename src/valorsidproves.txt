@@ -1,4 +1,18 @@
 principal prova1 :
     enter x := 20
     const enter y := 40
+
+    funcio enter suma(x: enter, y:enter):
+        tornar x+y
+    fifuncio
+
+    procediment suma2 (x:enter, y:enter):
+        inici
+            enter z := x + y
+        fi
+    fiprocediment
+
+    inici
+        suma(40, 50)
+    fi
 fprincipal

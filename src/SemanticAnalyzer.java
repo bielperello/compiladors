@@ -272,9 +272,10 @@ public class SemanticAnalyzer {
         Object valor = null;
 
         if (assig instanceof LiteralNode lit) {
+            /*
             valor = lit.getValue();
 
-            int v = (Integer) valor;
+            int v = Double.valueOf(valor).toString().intVal();
             if (v < dt.getLimitInf() || v > dt.getLimitSup()) {
                 ErrorManager.add(new CompilerError(
                         decl.line, decl.column, CompilerError.TYPE.SEMANTIC,
@@ -282,6 +283,7 @@ public class SemanticAnalyzer {
                 ));
                 decl.setHasError(true);
             }
+            */
         } else if (assig instanceof RefNode r) {
             Simbol sr = currentScope.lookUp(r.getId());
 
@@ -399,8 +401,8 @@ public class SemanticAnalyzer {
     public void gest_instr(InstrNode i) {
         if (i instanceof AssignNode assign) {
             gest_assign(assign);
-        } else if (i instanceof CallNode call) {
-            gest_call(call);
+        } else if (i instanceof InstrNode.InstrRefNode ref) {
+            gest_ref(ref.getRef());
         } else if (i instanceof InputNode input) {
             gest_input(input);
         } else if (i instanceof OutputNode output) {
@@ -557,6 +559,7 @@ public class SemanticAnalyzer {
         DescripcioTipus tipusRetorn = dproc.getType();
         if (tipusRetorn == null) tipusRetorn = cercaTipus(Kind.UNKNOWN);
         c.setRetornTipus(tipusRetorn);
+        c.setKind(tipusRetorn.getTipusBase());
     }
 
 
@@ -736,6 +739,12 @@ public class SemanticAnalyzer {
             return;
         }
 
+        // R0 -> id ( e_list )
+        if(r instanceof CallNode c) {
+            gest_call(c);
+            return;
+        }
+
         // R0 -> id
         String id = r.getId();
         Simbol s = currentScope.lookUp(id);
@@ -770,7 +779,7 @@ public class SemanticAnalyzer {
                 tipus = dConst.getType();
                 mode = RefNode.ModeRef.CONST;
             }
-            case DescripcioProc dProc -> {
+            case DescripcioProc d -> {
                 ErrorManager.add(new CompilerError(
                         r.line, r.column, CompilerError.TYPE.SEMANTIC,
                         "No es pot fer referència a un mètode sense paràmetres: " + id
@@ -968,17 +977,9 @@ public class SemanticAnalyzer {
                 e.setMode(ExprNode.ModeExpr.MODECONST);
             }
             // TERM -> REF
-            case RefNode ref -> {
-                gest_expr_ref(ref, e);
-            }
-            // TERM -> CALL
-            case ExprNode.ExprInstrNode callExpr -> {
-                gest_expr_instr(callExpr, e);
-            }
+            case RefNode ref -> gest_expr_ref(ref, e);
             // TERM -> NOT E | - E
-            case UnaryOpNode un -> {
-                gest_expr_unary(un, e);
-            }
+            case UnaryOpNode un -> gest_expr_unary(un, e);
             default -> {}
         }
     }
@@ -986,18 +987,22 @@ public class SemanticAnalyzer {
     private void gest_expr_ref(RefNode ref, ExprNode e) {
         gest_ref(ref);
 
-        if (ref.getDescripcioTipus() == null) {
-            e.setDescripcioTipus(cercaTipus(Kind.UNKNOWN));
-            e.setHasError(true);
-        } else e.setDescripcioTipus(ref.getDescripcioTipus());
-
-        if (ref.getDesc() instanceof DescripcioVar dVar && !dVar.getInitialized()) {
-            if (!isTuple(ref.getDescripcioTipus())) {
-                ErrorManager.add(new CompilerError(
-                        ref.line, ref.column, CompilerError.TYPE.SEMANTIC,
-                        "La variable '" + ref.getId() + "' s'utilitza abans d'haver estat inicialitzada."
-                ));
+        if(ref instanceof CallNode call) {
+            gest_expr_call(call);
+        } else {
+            if (ref.getDescripcioTipus() == null) {
+                e.setDescripcioTipus(cercaTipus(Kind.UNKNOWN));
                 e.setHasError(true);
+            } else e.setDescripcioTipus(ref.getDescripcioTipus());
+
+            if (ref.getDesc() instanceof DescripcioVar dVar && !dVar.getInitialized()) {
+                if (!isTuple(ref.getDescripcioTipus())) {
+                    ErrorManager.add(new CompilerError(
+                            ref.line, ref.column, CompilerError.TYPE.SEMANTIC,
+                            "La variable '" + ref.getId() + "' s'utilitza abans d'haver estat inicialitzada."
+                    ));
+                    e.setHasError(true);
+                }
             }
         }
 
@@ -1011,14 +1016,11 @@ public class SemanticAnalyzer {
         e.setKind(ref.getKind());
     }
 
-    private void gest_expr_instr(ExprNode.ExprInstrNode callExpr, ExprNode e) {
-        CallNode call = callExpr.getCall();
-        gest_call(call);
-
+    public void gest_expr_call(CallNode call) {
         if(call.hasError()) {
-            e.setDescripcioTipus(cercaTipus(Kind.UNKNOWN));
-            e.setMode(ExprNode.ModeExpr.MODERESULT);
-            e.setHasError(true);
+            call.setDescripcioTipus(cercaTipus(Kind.UNKNOWN));
+            call.setMode(ExprNode.ModeExpr.MODERESULT);
+            call.setHasError(true);
             return;
         }
 
@@ -1027,16 +1029,16 @@ public class SemanticAnalyzer {
 
         if (tipusRetorn.getTipusBase() == Kind.VOID) {
             ErrorManager.add(new CompilerError(
-                    e.line, e.column, CompilerError.TYPE.SEMANTIC,
+                    call.line, call.column, CompilerError.TYPE.SEMANTIC,
                     "Un procediment no pot aparèixer dins una expressió."
             ));
             tipusRetorn = cercaTipus(Kind.UNKNOWN);
-            e.setHasError(true);
+            call.setHasError(true);
         }
 
-        e.setKind(tipusRetorn.getTipusBase());
-        e.setDescripcioTipus(tipusRetorn);
-        e.setMode(ExprNode.ModeExpr.MODERESULT);
+        call.setKind(tipusRetorn.getTipusBase());
+        call.setDescripcioTipus(tipusRetorn);
+        call.setMode(ExprNode.ModeExpr.MODERESULT);
     }
 
     private void gest_expr_unary(UnaryOpNode un, ExprNode e) {

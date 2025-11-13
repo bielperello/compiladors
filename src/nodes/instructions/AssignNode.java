@@ -1,7 +1,9 @@
 package nodes.instructions;
 
 import codegen.CodeGenerator;
+import codegen.EtiquetaManager;
 import codegen.OpCode;
+import nodes.Kind;
 import nodes.expresions.RefNode;
 import nodes.expresions.ExprNode;
 
@@ -21,18 +23,48 @@ public class AssignNode extends InstrNode {
     @Override
     public void generateCode() {
         // --- ASSIG → R = E ---
-
         expr.generateCode(); // generar el codi de l'expressió (E)
-        int exprVar = expr.getResultVar();
+        ref.generateCode(); // genera el codi de la referència (R)
 
-        ref.generateCode(); // generar el codi de la referència (R)
-        int base = ref.getBaseVar(); // base = R.r
-        int offset = ref.getOffsetVar(); // offset = R.d
+        int base = ref.getBaseVar();
+        int offset = ref.getOffsetVar();
 
-        if(offset != CodeGenerator.NUL_VAL && offset != 0) {
-            CodeGenerator.genera(OpCode.IND_ASS, exprVar, offset, base); // R.r[R.d] = E.r
+        if (ref.getDescripcioTipus().getTipusBase() == Kind.LOGIC) {
+            int ec = EtiquetaManager.novaEtiqueta("E"); // etiqueta per la branca certa
+            int ef = EtiquetaManager.novaEtiqueta("E"); // etiqueta per la branca falsa
+            int efi = EtiquetaManager.novaEtiqueta("E"); // etiqueta final de sentència
+
+            // branca CERTA
+            CodeGenerator.posaEtiqueta(ec);
+            if (offset != CodeGenerator.NUL_VAL && offset != 0) {
+                CodeGenerator.genera(OpCode.IND_ASS, -1, offset, base); // R.r[R.d] = -1
+            } else {
+                CodeGenerator.genera(OpCode.COPY, -1, base); // R.r = -1
+            }
+
+            CodeGenerator.genera(OpCode.GOTO, efi); // goto efi
+
+            // branca FALSA
+            CodeGenerator.posaEtiqueta(ef); // ef: skip
+            if (offset != CodeGenerator.NUL_VAL && offset != 0) {
+                CodeGenerator.genera(OpCode.IND_ASS, 0, offset, base); // R.r[R.d] = 0
+            } else {
+                CodeGenerator.genera(OpCode.COPY, 0, base); // R.r = 0
+            }
+
+            CodeGenerator.posaEtiqueta(efi); // efi: skip
+
+            // backpatch de les branques
+            CodeGenerator.backpatch(expr.getTrueList(), ec);
+            CodeGenerator.backpatch(expr.getFalseList(), ef);
         } else {
-            CodeGenerator.genera(OpCode.COPY, exprVar, base); // R.r = E.r
+            int exprVar = expr.getResultVar();
+
+            if(offset != CodeGenerator.NUL_VAL && offset != 0) {
+                CodeGenerator.genera(OpCode.IND_ASS, exprVar, offset, base); // R.r[R.d] = E.r
+            } else {
+                CodeGenerator.genera(OpCode.COPY, exprVar, base); // R.r = E.r
+            }
         }
     }
 }

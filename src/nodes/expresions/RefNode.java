@@ -29,12 +29,6 @@ public class RefNode extends ExprNode {
         this.modeRef = null;
     }
 
-    public RefNode(String id, ExprNode indexOpt, int line, int column) {
-        super(line, column);
-        this.id = id;
-        this.modeRef = null;
-    }
-
     public String getId() { return this.id; }
     public Descripcio getDesc() { return this.desc; }
     public ModeRef getModeRef() { return this.modeRef; }

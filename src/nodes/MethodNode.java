@@ -1,10 +1,10 @@
 package nodes;
 
+import codegen.*;
 import nodes.expresions.ExprNode;
 import nodes.instructions.InstrNode;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -17,15 +17,8 @@ public class MethodNode extends DeclNode {
     private final List<DeclNode> decls;
     private final List<InstrNode> instrs;
 
-    public MethodNode(boolean isFunction,
-                      String name,
-                      TypeNode returnType,
-                      List<ArgNode> args,
-                      List<DeclNode> decls,
-                      List<InstrNode> instrs,
-                      ExprNode returnExpr,
-                      int line,
-                      int column) {
+    public MethodNode(boolean isFunction, String name, TypeNode returnType, List<ArgNode> args,
+                      List<DeclNode> decls, List<InstrNode> instrs, ExprNode returnExpr, int line, int column) {
         super(returnType, name, returnExpr, line, column);
         this.isFunction = isFunction;
         this.params = args != null ? args : new ArrayList<>();
@@ -47,5 +40,32 @@ public class MethodNode extends DeclNode {
     // ======================
 
     @Override
-    public void generateCode() {}
+    public void generateCode() {
+        int np = CodeGenerator.nouproc(this.getId()); // crear entrada a la taula de procediments
+        CodeGenerator.pushProc(np); // pproc(profunditat) = np
+
+        int ei = EtiquetaManager.novaEtiqueta("E"); // etiqueta per l'inici
+        CodeGenerator.registrarEtiquetaProc(np, ei); // TP(np).ei = ei
+        CodeGenerator.posaEtiqueta(ei); // ei: skip
+        CodeGenerator.genera(OpCode.PMB, np); // pmb np
+
+        for(ArgNode arg : params) {
+            CodeGenerator.novavar(arg.getName(), arg.getType().getLookupName(), true, np);
+        }
+
+        if (this.isFunction) { // reservar variable de retorn
+            CodeGenerator.novavar("ret_" + this.getId(), this.getType().getLookupName(), false, np);
+        }
+
+        for(DeclNode decl : decls) {
+            decl.generateCode(); // generació de codi de les declaracions locals
+        }
+
+        for(InstrNode instr : instrs) {
+            instr.generateCode(); // generació de codi de les instruccions del cos
+        }
+
+        CodeGenerator.genera(OpCode.RTN, np); // rtn np
+        CodeGenerator.popProc(); // sortir del context
+    }
 }

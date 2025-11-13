@@ -35,12 +35,26 @@ public class LiteralNode extends ExprNode {
 
     @Override
     public void generateCode() {
-        int t = CodeGenerator.novaVarTemporal(); // t = novavar
+        if (this.value instanceof Boolean) {
+            // cas literal booleà amb backpatching
+            CodeGenerator.genera(OpCode.GOTO, CodeGenerator.NUL_VAL);
+            int pos = CodeGenerator.pc();
 
-        String literalText = String.valueOf(value);
+            if ((Boolean) value) {
+                this.trueList = List.of(pos);
+                this.falseList = List.of();
+            } else {
+                this.falseList = List.of(pos);
+                this.trueList = List.of();
+            }
+        } else {
+            int t = CodeGenerator.novaVarTemporal(); // t = novavar
+            String literalText = String.valueOf(value);
 
-        CodeGenerator.genera(OpCode.COPY, literalText, t); // t = lit
+            CodeGenerator.genera(OpCode.COPY, literalText, t); // t = lit
 
-        this.resultVar = t; // E.r = t
+            this.resultVar = t; // E.r = t
+        }
+
     }
 }

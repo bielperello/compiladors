@@ -12,6 +12,8 @@ public class CodeGenerator {
     private static final TaulaVariables TV = new TaulaVariables();
     private static final TaulaProcediments TP = new TaulaProcediments();
 
+    private static final Deque<Integer> pproc = new ArrayDeque<>();
+
     // --- Generació d’instruccions ---
     public static void genera(OpCode op, int arg1, int arg2, int dest) {
         code.add(new Instruction(op, arg1, arg2, dest));
@@ -50,10 +52,44 @@ public class CodeGenerator {
         return novavar("t" + nv, "temp", false, -1);
     }
 
-    public static void printCode() {
-        System.out.println("\n--- Codi Intermedi ---");
-        for (int i = 0; i < code.size(); i++)
-            System.out.printf("%3d: %s\n", i + 1, code.get(i));
+    public static void pushProc(int np) {
+        pproc.push(np);
+    }
+
+    public static void popProc() {
+        pproc.pop();
+    }
+
+    public static int currentProc() {
+        return pproc.isEmpty() ? -1 : pproc.peek();
+    }
+
+    public static void registrarEtiquetaProc(int np, int ei) {
+        TP.get(np).setEi(ei);
+    }
+
+    public static int getProcId(String func) {
+        return TP.get(func).id;
+    }
+
+    public static int pc() {
+        return code.size() - 1;
+    }
+
+    public static void backpatch(List<Integer> llista, int etiqueta) {
+        if (llista == null) return;
+        for(int pos : llista) {
+            Instruction inst = code.get(pos);
+            inst.setDest(etiqueta);
+        }
+    }
+
+    public static List<Integer> concat(List<Integer> l1, List<Integer> l2) {
+        List<Integer> list = new ArrayList<>();
+        if (l1 != null) list.addAll(l1);
+        if (l2 != null) list.addAll(l2);
+
+        return list;
     }
 
     public static void printTV() { TV.print(); }
