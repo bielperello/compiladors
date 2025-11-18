@@ -6,6 +6,7 @@ public class EntradaProcediment {
     public int nParams;
     public int nLocals;
     public int ei;
+    public int idRet;
 
     public EntradaProcediment(int id, String nom) {
         this.id = id;
@@ -15,6 +16,9 @@ public class EntradaProcediment {
     }
 
     public void setEi(int ei) { this.ei = ei; }
+    public void setParams(int nParams) { this.nParams = nParams; }
+    public void setLocals(int nLocals) { this.nLocals = nLocals; }
+    public void setIdRet(int idRet) { this.idRet = idRet; }
 
     @Override
     public String toString() {

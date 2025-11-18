@@ -72,6 +72,7 @@ public class RefNode extends ExprNode {
         if (desc instanceof DescripcioVar dVar) {
             baseVar = dVar.getId();  // R.r = d.nv
         } else if (desc instanceof DescripcioConst dConst) {
+            System.out.println(dConst.getValor());
             int t = CodeGenerator.novaVarTemporal();  // t = novavar
             CodeGenerator.genera(OpCode.COPY, String.valueOf(dConst.getValor()), t);  // t = d.valor
             baseVar = t;  // R.r = t
@@ -81,7 +82,6 @@ public class RefNode extends ExprNode {
         // --- E → R
         this.resultVar = baseVar; // E.r = R.r si era simple
     }
-
 
     @Override
     public String toString() {

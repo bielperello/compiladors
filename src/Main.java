@@ -1,4 +1,6 @@
 import java.io.FileReader;
+
+import codegen.CodeGenerator;
 import java_cup.runtime.Symbol;
 import errors.*;
 import nodes.*;
@@ -24,11 +26,17 @@ public class Main {
                 SemanticAnalyzer sem = new SemanticAnalyzer();
                 sem.analyze(ast);
 
+                if (!ErrorManager.hasErrors() && ast != null) {
+                    ast.generateCode();
+                    CodeGenerator.printTV();
+                    CodeGenerator.printTP();
+                    CodeGenerator.printCode();
+                }
+
                 ErrorManager.printErrors();
             } else {
                 System.out.println("S'han detectat errors lèxics o sintàctics, s'atura l'anàlisi.");
             }
-
         } catch (Exception e) {
             e.printStackTrace();
         }

@@ -1,18 +1,10 @@
-principal prova1 :
-    enter x := 20
-    const enter y := 40
-
-    funcio enter suma(x: enter, y:enter):
-        tornar x+y
+principal test2 :
+    funcio enter combinat(z: enter):
+        tornar z
     fifuncio
 
-    procediment suma2 (x:enter, y:enter):
-        inici
-            enter z := x + y
-        fi
-    fiprocediment
-
-    inici
-        suma(40, 50)
-    fi
+    funcio enter combinat2(z: enter):
+            tornar combinat(4)
+        fifuncio
 fprincipal
+

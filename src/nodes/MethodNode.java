@@ -47,14 +47,18 @@ public class MethodNode extends DeclNode {
         int ei = EtiquetaManager.novaEtiqueta("E"); // etiqueta per l'inici
         CodeGenerator.registrarEtiquetaProc(np, ei); // TP(np).ei = ei
         CodeGenerator.posaEtiqueta(ei); // ei: skip
+
         CodeGenerator.genera(OpCode.PMB, np); // pmb np
 
         for(ArgNode arg : params) {
             CodeGenerator.novavar(arg.getName(), arg.getType().getLookupName(), true, np);
         }
 
-        if (this.isFunction) { // reservar variable de retorn
-            CodeGenerator.novavar("ret_" + this.getId(), this.getType().getLookupName(), false, np);
+        // --- VARIABLE DE RETORN ---
+        int idRet = -1;
+        if (this.isFunction) {
+            idRet = CodeGenerator.novaVarTemporal();
+            CodeGenerator.registrarRetornProc(np, idRet);
         }
 
         for(DeclNode decl : decls) {
@@ -63,6 +67,15 @@ public class MethodNode extends DeclNode {
 
         for(InstrNode instr : instrs) {
             instr.generateCode(); // generació de codi de les instruccions del cos
+        }
+
+        if (this.isFunction) { // reservar variable de retorn
+            ExprNode retExpr = this.getExpr();
+            retExpr.generateCode();
+            int retVar = retExpr.getResultVar();
+
+            CodeGenerator.genera(OpCode.COPY, retVar, idRet);
+
         }
 
         CodeGenerator.genera(OpCode.RTN, np); // rtn np

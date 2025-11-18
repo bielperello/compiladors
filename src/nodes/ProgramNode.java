@@ -1,6 +1,10 @@
 package nodes;
 
+import codegen.CodeGenerator;
+import codegen.EtiquetaManager;
+import codegen.OpCode;
 import nodes.instructions.InstrNode;
+import simbols.descripcio.DescripcioVar;
 
 import java.util.Collections;
 import java.util.List;
@@ -24,7 +28,17 @@ public class ProgramNode extends Node {
 
     @Override
     public void generateCode() {
+        int np = CodeGenerator.nouproc(this.getName()); // crear entrada a la taula de procediments
+        CodeGenerator.pushProc(np); // pproc(profunditat) = np
+
+        int ei = EtiquetaManager.novaEtiqueta("E"); // etiqueta per l'inici
+        CodeGenerator.registrarEtiquetaProc(np, ei); // TP(np).ei = ei
+        CodeGenerator.posaEtiqueta(ei); // ei: skip
+
         for(DeclNode decl : decls) decl.generateCode();
         for(InstrNode instr : instrs) instr.generateCode();
+
+        CodeGenerator.genera(OpCode.RTN, np);           // rtn np  (fi del programa)
+        CodeGenerator.popProc();                        // sortir del context del principal
     }
 }

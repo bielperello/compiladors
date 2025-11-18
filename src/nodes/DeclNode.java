@@ -39,31 +39,34 @@ public class DeclNode extends Node {
         if (this instanceof MethodNode) return;
 
         int idProc = CodeGenerator.currentProc(); // procediment actual
-        int varId = CodeGenerator.novavar(this.id, this.type.getLookupName(), false, idProc);
 
-        if (expr != null) {
-            expr.generateCode();
+        if (!this.isConst) {
+            int varId = CodeGenerator.novavar(this.id, this.type.getLookupName(), false, idProc);
 
-            if (type.getKind() == Kind.LOGIC) {
-                // --- Inicialització booleana amb backpatching ---
-                int ec  = EtiquetaManager.novaEtiqueta("E");
-                int ef  = EtiquetaManager.novaEtiqueta("E");
-                int efi = EtiquetaManager.novaEtiqueta("E");
+            if (expr != null) {
+                expr.generateCode();
 
-                CodeGenerator.posaEtiqueta(ec);
-                CodeGenerator.genera(OpCode.COPY, -1, varId);
-                CodeGenerator.genera(OpCode.GOTO, efi);
+                if (type.getKind() == Kind.LOGIC) {
+                    // --- Inicialització booleana amb backpatching ---
+                    int ec  = EtiquetaManager.novaEtiqueta("E");
+                    int ef  = EtiquetaManager.novaEtiqueta("E");
+                    int efi = EtiquetaManager.novaEtiqueta("E");
 
-                CodeGenerator.posaEtiqueta(ef);
-                CodeGenerator.genera(OpCode.COPY, 0, varId);
+                    CodeGenerator.posaEtiqueta(ec);
+                    CodeGenerator.genera(OpCode.COPY, -1, varId);
+                    CodeGenerator.genera(OpCode.GOTO, efi);
 
-                CodeGenerator.posaEtiqueta(efi);
+                    CodeGenerator.posaEtiqueta(ef);
+                    CodeGenerator.genera(OpCode.COPY, 0, varId);
 
-                CodeGenerator.backpatch(expr.getTrueList(), ec);
-                CodeGenerator.backpatch(expr.getFalseList(), ef);
-            } else {
-                int exprVar = expr.getResultVar();
-                CodeGenerator.genera(OpCode.COPY, exprVar, varId);
+                    CodeGenerator.posaEtiqueta(efi);
+
+                    CodeGenerator.backpatch(expr.getTrueList(), ec);
+                    CodeGenerator.backpatch(expr.getFalseList(), ef);
+                } else {
+                    int exprVar = expr.getResultVar();
+                    CodeGenerator.genera(OpCode.COPY, exprVar, varId);
+                }
             }
         }
     }

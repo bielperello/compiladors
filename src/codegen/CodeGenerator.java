@@ -1,12 +1,15 @@
 package codegen;
 
+import simbols.descripcio.DescripcioVar;
+
 import java.util.*;
 
 public class CodeGenerator {
-    public static final int NUL_VAL = -1;
+    public static final int NUL_VAL = Integer.MIN_VALUE;
 
     private static int nv = 0;  // comptador variables
     private static int np = 0;  // comptador procediments
+    public static int nt = -1; // comptador temporals
     private static final List<Instruction> code = new ArrayList<>();
 
     private static final TaulaVariables TV = new TaulaVariables();
@@ -49,7 +52,7 @@ public class CodeGenerator {
     }
 
     public static int novaVarTemporal() {
-        return novavar("t" + nv, "temp", false, -1);
+        return nt--;
     }
 
     public static void pushProc(int np) {
@@ -66,6 +69,14 @@ public class CodeGenerator {
 
     public static void registrarEtiquetaProc(int np, int ei) {
         TP.get(np).setEi(ei);
+    }
+
+    public static void registrarRetornProc(int np, int id) {
+        TP.get(np).setIdRet(id);
+    }
+
+    public static EntradaProcediment getProc(int id) {
+        return TP.get(id);
     }
 
     public static int getProcId(String func) {
@@ -94,4 +105,9 @@ public class CodeGenerator {
 
     public static void printTV() { TV.print(); }
     public static void printTP() { TP.print(); }
+    public static void printCode() {
+        for(Instruction inst : code) {
+            System.out.println(inst.toString());
+        }
+    }
 }

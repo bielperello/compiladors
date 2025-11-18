@@ -314,8 +314,6 @@ public class SemanticAnalyzer {
     public void gest_method(MethodNode m) {
         if (m == null) return;
 
-        gest_decls(m.getDecls());
-
         DescripcioTipus tipusRetorn = gest_type(m.getType());
 
         if (m.getType().hasError() || tipusRetorn == null) {
@@ -362,6 +360,7 @@ public class SemanticAnalyzer {
             }
         }
 
+        gest_decls(m.getDecls());
         gest_instrs(m.getInstrs());
 
         if (m.isFunction() && tipusRetorn != null) {
@@ -485,7 +484,6 @@ public class SemanticAnalyzer {
         if (s != null) {
             Descripcio d = s.getDescripcio();
             if (d instanceof DescripcioVar dvar) dvar.setInitialized(true);
-            else if (d instanceof DescripcioArg darg) darg.setInitialized(true);
         }
     }
 
@@ -587,7 +585,6 @@ public class SemanticAnalyzer {
         if (s != null) {
             Descripcio d = s.getDescripcio();
             if (d instanceof DescripcioVar dvar) dvar.setInitialized(true);
-            else if (d instanceof DescripcioArg darg) darg.setInitialized(true);
         }
     }
 
@@ -747,6 +744,7 @@ public class SemanticAnalyzer {
 
         // R0 -> id
         String id = r.getId();
+
         Simbol s = currentScope.lookUp(id);
 
         if (s == null) {
@@ -769,10 +767,6 @@ public class SemanticAnalyzer {
         switch (desc) {
             case DescripcioVar dVar -> {
                 tipus = dVar.getType();
-                mode = RefNode.ModeRef.VAR;
-            }
-            case DescripcioArg dArg -> {
-                tipus = dArg.getType();
                 mode = RefNode.ModeRef.VAR;
             }
             case DescripcioConst dConst -> {
@@ -995,7 +989,7 @@ public class SemanticAnalyzer {
                 e.setHasError(true);
             } else e.setDescripcioTipus(ref.getDescripcioTipus());
 
-            if (ref.getDesc() instanceof DescripcioVar dVar && !dVar.getInitialized()) {
+            if (ref.getDesc() instanceof DescripcioVar dVar && !dVar.getInitialized() && !dVar.getIsParam()) {
                 if (!isTuple(ref.getDescripcioTipus())) {
                     ErrorManager.add(new CompilerError(
                             ref.line, ref.column, CompilerError.TYPE.SEMANTIC,

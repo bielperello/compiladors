@@ -66,8 +66,9 @@ public class CallNode extends RefNode {
         CodeGenerator.genera(OpCode.CALL, np); // call np
 
         if (this.retornTipus.getTipusBase() != Kind.VOID) {
+            int result = CodeGenerator.getProc(np).idRet; // agafam l'id del temporal que té el retorn
             int t = CodeGenerator.novaVarTemporal(); // t = novavar
-            CodeGenerator.genera(OpCode.COPY, "ret_" + this.getId(), t); // copy
+            CodeGenerator.genera(OpCode.COPY, result, t); // copy
             this.resultVar = t;
         }
     }
