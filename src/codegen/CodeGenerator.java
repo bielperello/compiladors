@@ -1,6 +1,6 @@
 package codegen;
 
-import simbols.descripcio.DescripcioVar;
+import nodes.Kind;
 
 import java.util.*;
 
@@ -39,9 +39,9 @@ public class CodeGenerator {
     }
 
     // --- Gestió de variables i procediments ---
-    public static int novavar(String nom, String tipus, boolean esParam, int idProc) {
+    public static int novavar(String nom, int ocup, int desp, Kind tipus, boolean isParam, int idProc) {
         nv++;
-        TV.afegir(new EntradaVariable(nv, nom, tipus, esParam, idProc));
+        TV.afegir(new EntradaVariable(nv, nom, ocup, desp, tipus, isParam, idProc));
         return nv;
     }
 
@@ -101,6 +101,18 @@ public class CodeGenerator {
         if (l2 != null) list.addAll(l2);
 
         return list;
+    }
+
+    public static void actualitzarProcediments() {
+        for(int x = 1; x < nv; x++) {
+            EntradaVariable ev = TV.get(x);
+            if (!ev.isParam) {
+                int p = ev.idProc;
+                int ocupx = ev.ocupacio;
+                TP.get(p).ocupVL = TP.get(p).ocupVL + ocupx;
+                ev.desp = ev.desp*TP.get(p).ocupVL;
+            }
+        }
     }
 
     public static void printTV() { TV.print(); }

@@ -3,6 +3,7 @@ package nodes;
 import codegen.*;
 import nodes.expresions.ExprNode;
 import nodes.instructions.InstrNode;
+import simbols.descripcio.DescripcioTipus;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -51,7 +52,9 @@ public class MethodNode extends DeclNode {
         CodeGenerator.genera(OpCode.PMB, np); // pmb np
 
         for(ArgNode arg : params) {
-            CodeGenerator.novavar(arg.getName(), arg.getType().getLookupName(), true, np);
+            DescripcioTipus dt = arg.getDescripcioTipus();
+            CodeGenerator.novavar(arg.getName(), dt.getOcupacio(), 1, dt.getTipusBase(), true, np);
+            CodeGenerator.getProc(np).incrementParams();
         }
 
         // --- VARIABLE DE RETORN ---

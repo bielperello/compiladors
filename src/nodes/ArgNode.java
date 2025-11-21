@@ -1,8 +1,12 @@
 package nodes;
 
+import simbols.descripcio.DescripcioTipus;
+
 public class ArgNode extends Node{
-    public String id;
-    public TypeNode type;
+    private final String id;
+    private final TypeNode type;
+
+    private DescripcioTipus dt;
 
     public ArgNode(String id, TypeNode type) {
         super(type.line, type.column);
@@ -14,9 +18,10 @@ public class ArgNode extends Node{
     public TypeNode getType() {
         return this.type;
     }
+    public DescripcioTipus getDescripcioTipus() { return this.dt; }
+
+    public void setDescripcioTipus(DescripcioTipus dt) { this.dt = dt; }
 
     @Override
-    public void generateCode() {
-
-    }
+    public void generateCode() {}
 }

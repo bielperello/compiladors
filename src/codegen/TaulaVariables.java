@@ -13,6 +13,8 @@ public class TaulaVariables {
         return llista.get(id - 1);
     }
 
+    public List<EntradaVariable> getList() { return this.llista; }
+
     public void print() {
         System.out.println("\n--- Taula de Variables ---");
         llista.forEach(System.out::println);

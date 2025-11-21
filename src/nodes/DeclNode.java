@@ -4,12 +4,15 @@ import codegen.CodeGenerator;
 import codegen.EtiquetaManager;
 import codegen.OpCode;
 import nodes.expresions.ExprNode;
+import simbols.descripcio.DescripcioTipus;
 
 public class DeclNode extends Node {
     private final TypeNode type;
     private final String id;
     private final ExprNode expr;
     private boolean isConst;
+
+    private DescripcioTipus dt;
 
     public DeclNode(TypeNode type, String id, ExprNode expr, boolean isConst, int line, int column) {
         super (line, column);
@@ -34,14 +37,16 @@ public class DeclNode extends Node {
 
     public boolean isConst() { return this.isConst; }
 
+    public void setDescripcioTipus(DescripcioTipus dt) { this.dt = dt; }
+
     @Override
     public void generateCode() {
-        if (this instanceof MethodNode) return;
-
         int idProc = CodeGenerator.currentProc(); // procediment actual
+        CodeGenerator.getProc(idProc).incrementLocals(); // incrementar variables locals
 
         if (!this.isConst) {
-            int varId = CodeGenerator.novavar(this.id, this.type.getLookupName(), false, idProc);
+            int varId = CodeGenerator.novavar(this.id, this.dt.getOcupacio(),
+                    -1, this.dt.getTipusBase(), false, idProc);
 
             if (expr != null) {
                 expr.generateCode();

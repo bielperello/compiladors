@@ -78,6 +78,8 @@ public class SemanticAnalyzer {
             return;
         }
 
+        decl.setDescripcioTipus(dt);
+
         // Gestió concreta d'una declaració constant
         if (decl.isConst()) {
             gest_decl_const(decl, dt);
@@ -201,6 +203,7 @@ public class SemanticAnalyzer {
 
             // Emmagatzemar el tipus del camp
             DescripcioTipus dt = gest_type(camp.getType());
+            camp.setDescripcioTipus(dt);
 
             // Comprovar que el tipus no tengui error
             if(camp.getType().hasError() || dt == null) {
@@ -227,6 +230,8 @@ public class SemanticAnalyzer {
             ));
             decl.setHasError(true);
         }
+
+        decl.setDescripcioTipus(descTupla);
     }
 
     // DECL -> CONST TIPUS ID := E
@@ -341,6 +346,7 @@ public class SemanticAnalyzer {
             for (ArgNode arg : m.getParams()) {
                 String name = arg.getName();
                 DescripcioTipus tipusArg = gest_type(arg.getType());
+                arg.setDescripcioTipus(tipusArg);
 
                 if (arg.getType().hasError() || tipusArg == null) {
                     m.setHasError(true);

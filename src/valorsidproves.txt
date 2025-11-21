@@ -1,10 +1,20 @@
-principal test2 :
-    funcio enter combinat(z: enter):
-        tornar z
-    fifuncio
+principal main :
+    procediment combinar(x: cadena, y: cadena):
+        inici
+            cadena z := x + y
+        fi
+    fiprocediment
 
-    funcio enter combinat2(z: enter):
-            tornar combinat(4)
-        fifuncio
+    inici
+        enter x := 20
+        enter z := 0
+
+        cas z:
+            10: z := z + 10
+            5:  z := z + 5
+            0: z := z + 0
+            altre:  z := z + 1000
+        fcas
+    fi
 fprincipal
 

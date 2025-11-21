@@ -31,11 +31,10 @@ public class IfNode extends CondNode {
         condition.generateCode(); // genera el codi de l'expressió (E)
 
         int m1 = EtiquetaManager.novaEtiqueta("M"); // etiqueta marcador m1 (bloc then)
-        int m2 = EtiquetaManager.novaEtiqueta("M2"); // etiqueta marcador m2 (bloc else)
+        int m2 = EtiquetaManager.novaEtiqueta("M"); // etiqueta marcador m2 (bloc else)
         int eFi = EtiquetaManager.novaEtiqueta("E"); // etiqueta final de sentència
 
         CodeGenerator.backpatch(condition.getTrueList(), m1); // Si E = cert -> bloc then
-        CodeGenerator.backpatch(condition.getFalseList(), m2); // Si E = fals -> bloc else
 
         CodeGenerator.posaEtiqueta(m1); // m1: skip
         for(InstrNode instr : thenInstrs) {
@@ -45,11 +44,14 @@ public class IfNode extends CondNode {
         CodeGenerator.genera(OpCode.GOTO, eFi); // goto eFi (si ve del bloc then)
 
         if (!elseInstrs.isEmpty()) {
+            CodeGenerator.backpatch(condition.getFalseList(), m2); // Si E = fals -> bloc else
             CodeGenerator.posaEtiqueta(m2); // m2: skip
 
             for(InstrNode instr : elseInstrs) {
                 instr.generateCode(); // genera el codi de cada instrucció del bloc else
             }
+        } else {
+            CodeGenerator.backpatch(condition.getFalseList(), eFi); // Si E = fals -> etiqueta final
         }
 
         CodeGenerator.posaEtiqueta(eFi); // eFi: skip

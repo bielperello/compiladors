@@ -1,23 +1,29 @@
 package codegen;
 
+import nodes.Kind;
+
 public class EntradaVariable {
     public final int id;
     public final String nom;
-    public final String tipus;
-    public final boolean esParam;
+    public final int ocupacio;
+    public int desp;
+    public final Kind tsb;
+    public final boolean isParam;
     public final int idProc;
 
-    public EntradaVariable(int id, String nom, String tipus, boolean esParam, int idProc) {
+    public EntradaVariable(int id, String nom, int ocup, int desp, Kind tsb, boolean isParam,int idProc) {
         this.id = id;
         this.nom = nom;
-        this.tipus = tipus;
-        this.esParam = esParam;
         this.idProc = idProc;
+        this.ocupacio = ocup;
+        this.desp = desp;
+        this.isParam = isParam;
+        this.tsb = tsb;
     }
 
     @Override
     public String toString() {
-        return String.format("%3d | %-10s | %-6s | param:%-5s | proc:%d",
-                id, nom, tipus, esParam, idProc);
+        return String.format("%3d | %-10s | %d | %d | %-6s | proc:%d",
+                id, nom, ocupacio, desp, tsb.toString().toLowerCase(), idProc);
     }
 }

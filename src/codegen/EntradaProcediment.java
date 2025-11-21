@@ -8,16 +8,19 @@ public class EntradaProcediment {
     public int ei;
     public int idRet;
 
+    public int ocupVL;
+
     public EntradaProcediment(int id, String nom) {
         this.id = id;
         this.nom = nom;
         this.nParams = 0;
         this.nLocals = 0;
+        this.ocupVL = 0;
     }
 
     public void setEi(int ei) { this.ei = ei; }
-    public void setParams(int nParams) { this.nParams = nParams; }
-    public void setLocals(int nLocals) { this.nLocals = nLocals; }
+    public void incrementParams() { this.nParams++; }
+    public void incrementLocals() { this.nLocals++; }
     public void setIdRet(int idRet) { this.idRet = idRet; }
 
     @Override
