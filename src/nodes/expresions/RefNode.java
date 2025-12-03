@@ -2,6 +2,7 @@ package nodes.expresions;
 
 import codegen.CodeGenerator;
 import codegen.OpCode;
+import nodes.Kind;
 import simbols.descripcio.*;
 
 public class RefNode extends ExprNode {
@@ -53,34 +54,43 @@ public class RefNode extends ExprNode {
 
         public RefNode getBase() { return base; }
 
-        @Override
-        public void generateCode() {
+        public void generateRef() {
             // --- R0 → R1.id
-            base.generateCode(); // generar el codi de la base (R1)
+            base.generateRef(); // generar el codi de la base (R1)
 
-            DescripcioTipus d = (DescripcioTipus) this.getDesc();
-            DescripcioCamp dc = d.getCamp(this.getId());
+            DescripcioCamp dc = base.getDescripcioTipus().getCamp(this.getId());
 
             this.setBaseVar(base.getBaseVar()); // R0.r = R1.r
             this.setOffsetVar(base.getOffsetVar() + dc.getDesplaçament()); // R0.d = R1.d + d
         }
     }
 
+    public void generateRef() {
+        // --- R → id ---
+        if (desc instanceof DescripcioVar dVar) {
+            baseVar = dVar.getId(); // R.r = d.nv
+            offsetVar = (tipus.getTipusBase().equals(Kind.TUPLA)) ? 0 : CodeGenerator.NUL_VAL; // R.d = 0 / nul_val
+        } else if (desc instanceof DescripcioConst dConst) {
+            int t = CodeGenerator.novaVarTemporal(); // t = novavar
+            CodeGenerator.genera(OpCode.COPY, String.valueOf(dConst.getValor()), t); // t = d.valor
+            baseVar = t; // R.r = t
+            offsetVar = CodeGenerator.NUL_VAL;
+        }
+    }
+
     @Override
     public void generateCode() {
         // --- R → id ---
-        if (desc instanceof DescripcioVar dVar) {
-            baseVar = dVar.getId();  // R.r = d.nv
-        } else if (desc instanceof DescripcioConst dConst) {
-            System.out.println(dConst.getValor());
-            int t = CodeGenerator.novaVarTemporal();  // t = novavar
-            CodeGenerator.genera(OpCode.COPY, String.valueOf(dConst.getValor()), t);  // t = d.valor
-            baseVar = t;  // R.r = t
-        }
-        offsetVar = CodeGenerator.NUL_VAL;  // R.d = nul_val
+        this.generateRef();
 
         // --- E → R
-        this.resultVar = baseVar; // E.r = R.r si era simple
+        if (offsetVar == CodeGenerator.NUL_VAL) {
+            this.resultVar = baseVar; // E.r = R.r si era simple
+        } else { // no generar l'IND_VAL fins que no sigui tupla
+            int t = CodeGenerator.novaVarTemporal(); // t = novavar
+            CodeGenerator.genera(OpCode.IND_VAL, baseVar, offsetVar, t); // t = R.r[R.d]
+            this.resultVar = t; // E.r = t
+        }
     }
 
     @Override

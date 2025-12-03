@@ -42,9 +42,9 @@ public class DeclNode extends Node {
     @Override
     public void generateCode() {
         int idProc = CodeGenerator.currentProc(); // procediment actual
-        CodeGenerator.getProc(idProc).incrementLocals(); // incrementar variables locals
 
-        if (!this.isConst) {
+        if (!this.isConst && this.type.getKind() != Kind.TUPLA) {
+            CodeGenerator.getProc(idProc).incrementLocals(); // incrementar variables locals
             int varId = CodeGenerator.novavar(this.id, this.dt.getOcupacio(),
                     -1, this.dt.getTipusBase(), false, idProc);
 

@@ -1,20 +1,10 @@
 principal main :
-    procediment combinar(x: cadena, y: cadena):
-        inici
-            cadena z := x + y
-        fi
-    fiprocediment
-
+    tupla {x: enter, y: enter} d
+    tupla {edat1: enter, edat2: enter, c: d} Persona
     inici
-        enter x := 20
-        enter z := 0
-
-        cas z:
-            10: z := z + 10
-            5:  z := z + 5
-            0: z := z + 0
-            altre:  z := z + 1000
-        fcas
+        Persona p
+        enter y := p.c.y
+        p.edat2 := 10
     fi
 fprincipal
 

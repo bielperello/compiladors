@@ -4,13 +4,12 @@ import nodes.Kind;
 import java.util.List;
 
 public class DescripcioTipus extends Descripcio {
-    private final String nomTipus;
+    private String nomTipus;
     private final Kind tipusBase;
     private int ocupacio;
 
     private Integer limitInf;               // Límits per a enters
     private Integer limitSup;
-    private DescripcioTipus tipusElemental; // Tipus dels elements (si és un array)
     private List<DescripcioCamp> camps;         // Camps (si és una tupla)
 
     // Constructor bàsic per a tipus simples (enter, booleà, caracter...)
@@ -31,15 +30,6 @@ public class DescripcioTipus extends Descripcio {
         this.ocupacio = ocupacio;
     }
 
-    // Constructor per a arrays
-    public DescripcioTipus(String nomTipus, DescripcioTipus tipusElemental, int ocupacio) {
-        super(TDesc.DTIPUS);
-        this.nomTipus = nomTipus;
-        this.tipusBase = Kind.ARRAY;
-        this.tipusElemental = tipusElemental;
-        this.ocupacio = ocupacio;
-    }
-
     // Constructor per a records
     public DescripcioTipus(String nomTipus, List<DescripcioCamp> camps, int ocupacio) {
         super(TDesc.DTIPUS);
@@ -55,7 +45,6 @@ public class DescripcioTipus extends Descripcio {
     public int getOcupacio() { return ocupacio; }
     public Integer getLimitInf() { return limitInf; }
     public Integer getLimitSup() { return limitSup; }
-    public DescripcioTipus getTipusElemental() { return tipusElemental; }
     public List<DescripcioCamp> getCamps() { return camps; }
 
     public DescripcioCamp getCamp(String nomCamp) {
@@ -68,6 +57,7 @@ public class DescripcioTipus extends Descripcio {
         return null;
     }
 
+    public void setNomTipus(String nomTipus) { this.nomTipus = nomTipus; }
     public void setCamps(List<DescripcioCamp> c) { this.camps = c; }
     public void setOcupacio(int ocupacio) {this.ocupacio = ocupacio; }
 }

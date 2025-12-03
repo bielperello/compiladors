@@ -7,10 +7,11 @@ import java.util.*;
 public class CodeGenerator {
     public static final int NUL_VAL = Integer.MIN_VALUE;
 
-    private static int nv = 0;  // comptador variables
-    private static int np = 0;  // comptador procediments
+    public static int nv = 0;  // comptador variables
+    public static int np = 0;  // comptador procediments
     public static int nt = -1; // comptador temporals
     private static final List<Instruction> code = new ArrayList<>();
+    private static final List<String> codeReadable = new ArrayList<>();
 
     private static final TaulaVariables TV = new TaulaVariables();
     private static final TaulaProcediments TP = new TaulaProcediments();
@@ -23,7 +24,7 @@ public class CodeGenerator {
     }
 
     public static void genera(OpCode op, String literal, int dest) {
-        code.add(new InstructionLiteral(op, literal, dest));
+        code.add(new Instruction(op, literal, dest));
     }
 
     public static void genera(OpCode op, int arg1, int dest) {
@@ -52,6 +53,7 @@ public class CodeGenerator {
     }
 
     public static int novaVarTemporal() {
+        TP.get(currentProc()).incrementTemporals();
         return nt--;
     }
 
@@ -78,6 +80,7 @@ public class CodeGenerator {
     public static EntradaProcediment getProc(int id) {
         return TP.get(id);
     }
+    public static EntradaVariable getVar(int id) { return TV.get(id); }
 
     public static int getProcId(String func) {
         return TP.get(func).id;
@@ -104,22 +107,40 @@ public class CodeGenerator {
     }
 
     public static void actualitzarProcediments() {
-        for(int x = 1; x < nv; x++) {
+        for(int x = 1; x <= nv; x++) {
             EntradaVariable ev = TV.get(x);
             if (!ev.isParam) {
                 int p = ev.idProc;
                 int ocupx = ev.ocupacio;
+
                 TP.get(p).ocupVL = TP.get(p).ocupVL + ocupx;
                 ev.desp = ev.desp*TP.get(p).ocupVL;
+            } else {
+                int p = ev.idProc;
+                int ocupx = ev.ocupacio;
+
+                TP.get(p).ocupPM = TP.get(p).ocupPM + ocupx;
+                ev.desp = ev.desp*TP.get(p).ocupPM;
             }
         }
     }
 
+    public static TaulaVariables getTaulaVariables() { return TV; }
+    public static TaulaProcediments getTaulaProcediments() { return TP; }
+    public static List<Instruction> getCode() { return code; }
+
+    public static String readableCode() {
+        StringBuilder sb = new StringBuilder();
+
+        for(Instruction inst : code) {
+            sb.append(inst.toReadableString());
+            sb.append("\n");
+        }
+
+        return sb.toString();
+    }
+
     public static void printTV() { TV.print(); }
     public static void printTP() { TP.print(); }
-    public static void printCode() {
-        for(Instruction inst : code) {
-            System.out.println(inst.toString());
-        }
-    }
+    public static void printCode() { System.out.println(readableCode()); }
 }

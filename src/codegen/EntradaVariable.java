@@ -23,7 +23,7 @@ public class EntradaVariable {
 
     @Override
     public String toString() {
-        return String.format("%3d | %-10s | %d | %d | %-6s | proc:%d",
+        return String.format("%3d | %-10s | %d | desp:%4d | %-6s | proc:%d",
                 id, nom, ocupacio, desp, tsb.toString().toLowerCase(), idProc);
     }
 }

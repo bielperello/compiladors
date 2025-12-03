@@ -150,7 +150,7 @@ public class SemanticAnalyzer {
                     "El tipus '" + t.getLookupName() + "' no està declarat."
             ));
             t.setHasError(true);
-            return null;
+            return cercaTipus(Kind.UNKNOWN);
         }
 
         // Comprovar que el tipus és una descripció de tipus
@@ -160,13 +160,13 @@ public class SemanticAnalyzer {
                     "El símbol '" + t.getLookupName() + "' no és un tipus vàlid."
             ));
             t.setHasError(true);
-            return null;
+            return cercaTipus(Kind.UNKNOWN);
         }
 
         return dt;
     }
 
-    // DECL -> TUPLA ( ARGS [CAMPS] ) ID
+    // DECL -> TUPLA { ARGS } ID
     private void novaTupla(DeclNode decl) {
         TypeNode tipusNode = decl.getType();
         String nomTupla = decl.getId();
@@ -201,7 +201,6 @@ public class SemanticAnalyzer {
                 return;
             }
 
-            // Emmagatzemar el tipus del camp
             DescripcioTipus dt = gest_type(camp.getType());
             camp.setDescripcioTipus(dt);
 

@@ -1,5 +1,6 @@
 import java.io.FileReader;
 
+import assembler.AssemblerGenerator;
 import codegen.CodeGenerator;
 import java_cup.runtime.Symbol;
 import errors.*;
@@ -28,9 +29,15 @@ public class Main {
 
                 if (!ErrorManager.hasErrors() && ast != null) {
                     ast.generateCode();
+                    CodeGenerator.actualitzarProcediments();
+
                     CodeGenerator.printTV();
                     CodeGenerator.printTP();
                     CodeGenerator.printCode();
+
+                    AssemblerGenerator assembler = new AssemblerGenerator();
+                    assembler.generate();
+                    assembler.writeToFile("prova");
                 }
 
                 ErrorManager.printErrors();

@@ -24,7 +24,7 @@ public class AssignNode extends InstrNode {
     public void generateCode() {
         // --- ASSIG → R = E ---
         expr.generateCode(); // generar el codi de l'expressió (E)
-        ref.generateCode(); // genera el codi de la referència (R)
+        ref.generateRef(); // genera el codi de la referència (R)
 
         int base = ref.getBaseVar();
         int offset = ref.getOffsetVar();
@@ -60,7 +60,7 @@ public class AssignNode extends InstrNode {
         } else {
             int exprVar = expr.getResultVar();
 
-            if(offset != CodeGenerator.NUL_VAL && offset != 0) {
+            if(offset != CodeGenerator.NUL_VAL) {
                 CodeGenerator.genera(OpCode.IND_ASS, exprVar, offset, base); // R.r[R.d] = E.r
             } else {
                 CodeGenerator.genera(OpCode.COPY, exprVar, base); // R.r = E.r
