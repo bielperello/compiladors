@@ -42,7 +42,7 @@ public class OutputNode extends InstrNode {
             CodeGenerator.genera(OpCode.WRT, t);
         } else {
             int exprVar = expr.getResultVar();
-            CodeGenerator.genera(OpCode.WRT, exprVar);
+            CodeGenerator.genera(OpCode.WRT, exprVar, expr.getKind());
         }
     }
 }

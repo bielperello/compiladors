@@ -18,13 +18,21 @@ public class CodeGenerator {
 
     private static final Deque<Integer> pproc = new ArrayDeque<>();
 
+    public static final Map<String, String> stringLiterals = new HashMap<>();
+    private static int literalCounter = 0;
+    private static int labelStringCounter = 0;
+
     // --- Generació d’instruccions ---
     public static void genera(OpCode op, int arg1, int arg2, int dest) {
         code.add(new Instruction(op, arg1, arg2, dest));
     }
 
     public static void genera(OpCode op, String literal, int dest) {
-        code.add(new Instruction(op, literal, dest));
+        code.add(new InstructionLiteral(op, literal, dest));
+    }
+
+    public static void genera(OpCode op, int dest, Kind tsbIO) {
+        code.add(new InstructionIO(op, dest, tsbIO));
     }
 
     public static void genera(OpCode op, int arg1, int dest) {
@@ -43,6 +51,12 @@ public class CodeGenerator {
     public static int novavar(String nom, int ocup, int desp, Kind tipus, boolean isParam, int idProc) {
         nv++;
         TV.afegir(new EntradaVariable(nv, nom, ocup, desp, tipus, isParam, idProc));
+
+        if (tipus == Kind.CADENA) {
+            String b = "S_BUF_" + labelStringCounter++;
+            TV.get(nv).setBufferLabel(b);
+        }
+
         return nv;
     }
 
@@ -123,6 +137,18 @@ public class CodeGenerator {
                 ev.desp = ev.desp*TP.get(p).ocupPM;
             }
         }
+    }
+
+    public static String literalString(Object value) {
+        String text = value.toString();
+
+        if (stringLiterals.containsKey(text)) {
+            return stringLiterals.get(text);
+        }
+
+        String label = "LC_" + (literalCounter++);
+        stringLiterals.put(text, label);
+        return label;
     }
 
     public static TaulaVariables getTaulaVariables() { return TV; }

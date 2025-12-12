@@ -1,16 +1,20 @@
 package codegen;
 
 public class InstructionLiteral extends Instruction {
-    private final String literal;
+    public final String literal;
 
     public InstructionLiteral(OpCode op, String literal, int dest) {
         super(op, CodeGenerator.NUL_VAL, CodeGenerator.NUL_VAL, dest);
-        this.literal = literal;
+        String[] parts = literal.split("\\.");
+        this.literal = parts[0];
     }
 
     @Override
-    public String toString() {
-        return String.format("%-7s %-6s -> %4s", op, literal, dest);
+    public String toReadableString() {
+        return switch (op) {
+            case COPY -> super.getName(dest) + " = " + literal;
+            default -> throw new IllegalStateException("Unexpected value: " + op);
+        };
     }
 }
 

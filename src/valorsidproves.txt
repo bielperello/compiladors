@@ -1,10 +1,7 @@
 principal main :
-    tupla {x: enter, y: enter} d
-    tupla {edat1: enter, edat2: enter, c: d} Persona
     inici
-        Persona p
-        enter y := p.c.y
-        p.edat2 := 10
+        logic x := cert
+        sortida(x)
     fi
 fprincipal
 

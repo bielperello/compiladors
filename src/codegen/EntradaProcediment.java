@@ -1,5 +1,7 @@
 package codegen;
 
+import assembler.AssemblerGenerator;
+
 public class EntradaProcediment {
     public final int id;
     public final String nom;
@@ -19,7 +21,7 @@ public class EntradaProcediment {
         this.nLocals = 0;
         this.nTemporals = 0;
         this.ocupVL = 0;
-        this.ocupPM = 4;
+        this.ocupPM = AssemblerGenerator.DESP_PARAMS;
     }
 
     public void setEi(int ei) { this.ei = ei; }

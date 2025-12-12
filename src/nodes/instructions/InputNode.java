@@ -22,9 +22,9 @@ public class InputNode extends InstrNode {
         int offset = ref.getOffsetVar();
 
         int t = CodeGenerator.novaVarTemporal(); // t = novavar
-        CodeGenerator.genera(OpCode.READ, t);
+        CodeGenerator.genera(OpCode.READ, t, ref.getKind());
 
-        if (offset != CodeGenerator.NUL_VAL && offset != 0) {
+        if (offset != CodeGenerator.NUL_VAL) {
             CodeGenerator.genera(OpCode.IND_ASS, t, offset, base);
         } else {
             CodeGenerator.genera(OpCode.COPY, t, base);

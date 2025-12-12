@@ -1,11 +1,13 @@
 package assembler;
 
 import codegen.*;
+import nodes.Kind;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 public class AssemblerGenerator {
     private final TaulaVariables TV;
@@ -18,6 +20,9 @@ public class AssemblerGenerator {
 
     private final String DISP_REGISTER = "A0";
     private final String BP_LOCAL = "A6";
+    private final int MIDA_MAX_STR = 512;
+
+    public static final int DESP_PARAMS = 8;
 
     public AssemblerGenerator() {
         this.TV = CodeGenerator.getTaulaVariables();
@@ -33,12 +38,29 @@ public class AssemblerGenerator {
     }
 
     private void generateDataSection() {
+        // Strings Literals
+        for (Map.Entry<String, String> entry : CodeGenerator.stringLiterals.entrySet()) {
+            String literal = entry.getKey();
+            String label = entry.getValue();
+
+            asm.append(label).append(": DC.B '").append(literal).append("',0\n");
+        }
+
+        // Variables String
+        for (EntradaVariable e : CodeGenerator.getTaulaVariables().getList()) {
+            if (e.tsb == Kind.CADENA) {
+                asm.append(e.bufferLabel).append(": DS.B ").append(MIDA_MAX_STR).append("\n");
+            }
+        }
+
         // Display Vector
-        int maxDepth = CodeGenerator.np - 1;
-        asm.append("DISP: DS.L ").append(maxDepth + 1).append("\n\n");
+        asm.append("\nDISP: DS.L ").append(CodeGenerator.np).append("\n\n");
 
         // Heap Pointer
         asm.append("HP: DS.L 1\n\n");
+
+        // Buffer temporal per strings
+        asm.append("BTS: DS.B 512\n\n");
 
         // Darrera línia de codi
         asm.append("\tEND START");
@@ -49,11 +71,8 @@ public class AssemblerGenerator {
 
         asm.append("START:\n");
         procActual = 1;
-        int blockSize = computeActivationBlock(procActual);
 
-        asm.append("    LINK A6,#-").append(blockSize).append("\n");
-        asm.append("    MOVE.L DISP").append(",-(A7)\n");
-        asm.append("    MOVE.L A6,DISP\n");
+        generateProcedurePMB(procActual);
 
         for (Instruction instr : code) {
             switch(instr.op) {
@@ -116,13 +135,75 @@ public class AssemblerGenerator {
                     asm.append("    MOVE.L D0,-").append(instr.arg2).append(aDestBase).append("\n");
 
                     break;
+                case WRT, READ:
+                    InstructionIO instrIO = (InstructionIO) instr;
+                    String varDest = gestAddress(instrIO.dest, procActual);
+
+                    if (instrIO.op == OpCode.READ) {
+                        if(instrIO.tsbIO == Kind.ENTER) {
+                            asm.append("    MOVE.L #4,D0\n");
+                            asm.append("    TRAP #15\n");
+                            asm.append("    MOVE.L D1,").append(varDest).append("\n");
+                        } else if (instrIO.tsbIO == Kind.CARACTER) {
+                            asm.append("    CLR.L D1\n");
+                            asm.append("    MOVE.L #5,D0\n");
+                            asm.append("    TRAP #15\n");
+                            asm.append("    MOVE.L D1,").append(varDest).append("\n");
+                        } else {
+                            if (instr.dest < 0) asm.append("    MOVE.L #BTS,").append(varDest).append("\n");
+
+                            // carregar punter al buffer associat
+                            asm.append("    MOVE.L ").append(varDest).append(",A1\n");
+                            asm.append("    MOVE.L #2,D0\n");
+                            asm.append("    TRAP #15\n");
+                        }
+                    } else {
+                        if (instrIO.tsbIO == Kind.ENTER) {
+                            asm.append("    MOVE.L ").append(varDest).append(",D1\n");
+                            asm.append("    MOVE.L #3,D0\n");
+                            asm.append("    TRAP #15\n");
+                        } else if (instrIO.tsbIO == Kind.CARACTER) {
+                            asm.append("    MOVE.L ").append(varDest).append(",D1\n");
+                            asm.append("    MOVE.L #6,D0\n");
+                            asm.append("    TRAP #15\n");
+                        } else {
+                            asm.append("    MOVE.L ").append(varDest).append(",A1\n");
+                            // sense salt de línia (TASK 13) amb salt de línia (TASK 14)
+                            asm.append("    MOVE.L #13,D0\n");
+                            asm.append("    TRAP #15\n");
+                        }
+                    }
+
+                    break;
                 default:
                     generateInstruction(instr, procActual);
                     break;
             }
         }
 
-        asm.append("    SIMHALT\n\n");
+        asm.append("\n    SIMHALT\n");
+
+        asm.append("\n* A0 = origen, A1 = desti\n");
+        asm.append("COPY_STRING:\n");
+        asm.append(".copy:\n");
+        asm.append("    MOVE.B (A0)+,D0\n");
+        asm.append("    MOVE.B D0,(A1)+\n");
+        asm.append("    BEQ .done\n");
+        asm.append("    BRA .copy\n");
+        asm.append(".done:\n");
+        asm.append("    RTS\n");
+
+        asm.append("\n\n* A0 = origen, A1 = desti\n");
+        asm.append("APPEND_STRING:\n");
+        asm.append(".trobar_final:\n");
+        asm.append("    MOVE.B (A1)+,D0\n");
+        asm.append("    BNE .trobar_final\n");
+        asm.append("    SUBA.L #1, A1\n");
+        asm.append(".append:\n");
+        asm.append("    MOVE.B (A0)+,D0\n");
+        asm.append("    MOVE.B D0,(A1)+\n");
+        asm.append("    BNE .append\n");
+        asm.append("    RTS\n\n");
     }
 
     private int computeActivationBlock(int idProc) {
@@ -131,22 +212,30 @@ public class AssemblerGenerator {
         int locals = proc.nLocals*4;
         int temps = proc.nTemporals*4;
 
-        int dispSave = 4;
-
-        return locals+temps+dispSave;
+        return locals+temps;
     }
 
     private void generateProcedurePMB(int dest) {
         int blockSize = computeActivationBlock(dest);
-        int profunditat = dest - 1;
+        int prof = dest - 1;
 
-        asm.append("\n    LINK A6,#-").append(blockSize).append("\n");
-        asm.append("    MOVE.L DISP+").append(4*profunditat).append(",-(A7)\n");
-        asm.append("    MOVE.L A6,DISP+").append(4*profunditat).append("\n\n");
+        // guardar l'antic DISP[prof] com informació de control local al bloc d'activació
+        asm.append("    MOVE.L DISP+").append(4*prof).append(",-(A7)\n");
+        // guardar l'antic BP (que es troba a A6) del programa invocador i guardar espai per locals
+        asm.append("    LINK A6,#-").append(blockSize).append("\n");
+        // actualitzar el valor DISP[prof] amb el BP del bloc d'activació del programa invocat
+        asm.append("    MOVE.L A6,DISP+").append(4*prof).append("\n\n");
+
+        for(EntradaVariable v : CodeGenerator.getTaulaVariables().getList()) {
+            if (v.idProc == dest && v.tsb == Kind.CADENA) {
+                asm.append("    LEA ").append(v.bufferLabel).append(", A0\n");
+                asm.append("    MOVE.L A0,").append(v.desp).append("(A6)\n");
+            }
+        }
     }
 
     private void generateProcedureRTN(int dest) {
-        asm.append("\n    MOVE.L -4(A6),DISP+").append(4*(dest-1)).append("\n");
+        asm.append("\n    MOVE.L 4(A6),DISP+").append(4*(dest-1)).append("\n");
         asm.append("    UNLK A6\n");
         asm.append("    RTS\n\n");
     }
@@ -158,16 +247,34 @@ public class AssemblerGenerator {
 
         switch(instr.op) {
             case COPY:
-                if (instr.literal != null) {
-                    asm.append("    MOVE.L #").append(instr.literal).append(",").append(aDest).append("\n");
-                    break;
-                } else {
-                    String aSrc = gestAddress(instr.arg1, procId);
+                if (instr instanceof InstructionLiteral instrLT) {
+                    // cas caràcter simple
+                    if (instrLT.literal.length() == 1) {
+                        char c = instrLT.literal.charAt(0);
+                        asm.append("    MOVE.L #").append((int) c).append(",").append(aDest).append("\n");
+                        break;
+                    }
 
-                    asm.append("    MOVE.L ").append(aSrc).append(",D0\n");
-                    asm.append("    MOVE.L D0,").append(aDest).append("\n");
+                    asm.append("    MOVE.L #").append(instrLT.literal).append(",").append(aDest).append("\n");
                     break;
                 }
+
+                if (instr.dest > 0 && instr.arg1 < 0 && CodeGenerator.getVar(instr.dest).tsb == Kind.CADENA) {
+                    asm.append("    MOVE.L ").append(aDest).append(",A1\n");
+                    asm.append("    MOVE.L ").append(aSrc1).append(",A0\n");
+                    asm.append("    JSR COPY_STRING\n");
+                    break;
+                }
+
+                /*
+                asm.append("    MOVE.L ").append(aSrc1).append(",D0\n");
+                asm.append("    MOVE.L D0,").append(aDest).append("\n");
+                 */
+
+                asm.append("    MOVE.L ").append(aSrc1).append(",").append(aDest).append("\n");
+
+
+                break;
             case ADD,SUB,PROD,DIV:
                 // operand 1 → D0
                 asm.append("    MOVE.L ").append(aSrc1).append(",D0\n");
@@ -189,7 +296,42 @@ public class AssemblerGenerator {
                 asm.append("    MOVE.L D0,").append(aDest).append("\n");
 
                 break;
+            case CONCAT:
+                // punter source 1 -> A0
+                asm.append("    MOVE.L ").append(aSrc1).append(",A0\n");
+
+                if (instr.dest < 0) {
+                    // buffer per temporals -> A1
+                    asm.append("    LEA BTS, A1\n");
+                } else {
+                    // punter destí -> A1
+                    asm.append("    MOVE.L ").append(aDest).append(",A1\n");
+                }
+
+                // copiar cadena 1 al destí
+                asm.append("    JSR COPY_STRING\n");
+
+                // punter source 2 -> A0
+                asm.append("    MOVE.L ").append(aSrc2).append(",A0\n");
+
+                if (instr.dest < 0) {
+                    // buffer per temporals -> A1
+                    asm.append("    LEA BTS, A1\n");
+                } else {
+                    // punter destí -> A1
+                    asm.append("    MOVE.L ").append(aDest).append(",A1\n");
+                }
+
+                // concatenar cadena 2 al final del destí
+                asm.append("    JSR APPEND_STRING\n");
+
+                if (instr.dest < 0) {
+                    asm.append("    MOVE.L #BTS,").append(aDest).append("\n");
+                }
+
+                break;
             case NEG, NOT:
+                asm.append("    MOVE.L ").append(aSrc1).append(",").append(aDest).append("\n");
                 asm.append("    MOVE.L ").append(aDest).append(",D0\n");
                 asm.append("    NOT.L D0\n");
                 asm.append("    MOVE.L D0,").append(aDest).append("\n");
@@ -211,17 +353,15 @@ public class AssemblerGenerator {
                 // resultat → destí
                 asm.append("    MOVE.L D0,").append(aDest).append("\n");
                 break;
-            case IND_ASS,IND_VAL:
-
-                break;
-            case PARAM_S, PARAM_C:
+            case PARAM_S:
+                asm.append("    MOVE.L ").append(aDest).append(",-(A7)\n");
 
                 break;
             case CALL:
+                asm.append("    JSR E").append(instr.dest).append("\n");
 
-                break;
-            case WRT,READ:
-
+                int ocupPM = CodeGenerator.getProc(instr.dest - 1).ocupPM;
+                asm.append("    ADD.L #").append(ocupPM).append(",A7\n");
                 break;
         }
     }

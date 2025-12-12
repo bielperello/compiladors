@@ -38,7 +38,6 @@ public class ProgramNode extends Node {
         for(DeclNode decl : decls) decl.generateCode();
         for(InstrNode instr : instrs) instr.generateCode();
 
-        CodeGenerator.genera(OpCode.RTN, np);           // rtn np  (fi del programa)
         CodeGenerator.popProc();                        // sortir del context del principal
     }
 }

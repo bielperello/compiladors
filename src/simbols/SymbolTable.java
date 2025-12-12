@@ -79,13 +79,13 @@ public class SymbolTable {
 
         // --- Tipus CARACTER ---
         DescripcioTipus charDesc = new DescripcioTipus(
-                "caracter", 0, 255, 1
+                "caracter", Kind.CARACTER, 4
         );
         this.add(new Simbol("caracter", charDesc, this.getScopeId()));
 
         // --- Tipus CADENA ---
         DescripcioTipus strDesc = new DescripcioTipus(
-                "cadena", Kind.CADENA, 0  // ocupació variable
+                "cadena", Kind.CADENA, 4  // ocupació variable
         );
         this.add(new Simbol("cadena", strDesc, this.getScopeId()));
 

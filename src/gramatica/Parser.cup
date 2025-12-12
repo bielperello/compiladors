@@ -7,7 +7,7 @@
  * Professor: Pere Palmer
  *
  * Generar:
- * java -jar java-cup-11b.jar -expect 16 -parser Parser -nodes ParserSym -destdir gen src/gramatica/Parser.cup
+ * java -jar java-cup-11b.jar -expect 36 -parser Parser -symbols ParserSym -destdir gen src/gramatica/Parser.cup
  */
 import java_cup.runtime.*;
 import java_cup.runtime.ComplexSymbolFactory.ComplexSymbol;

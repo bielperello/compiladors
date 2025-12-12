@@ -1,8 +1,9 @@
 package codegen;
 
 public enum OpCode {
-    COPY, ADD, SUB, PROD, DIV, NEG,
-    AND, OR, NOT,
+    COPY, COPY_STR,
+    ADD, SUB, PROD, DIV, NEG,
+    AND, OR, NOT, CONCAT,
     IND_VAL, IND_ASS,
     IF_LT, IF_LE, IF_EQ, IF_NE, IF_GE, IF_GT,
     GOTO, SKIP,

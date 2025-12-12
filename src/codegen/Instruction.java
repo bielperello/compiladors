@@ -1,5 +1,7 @@
 package codegen;
 
+import nodes.Kind;
+
 public class Instruction {
     public final OpCode op;
     public final int arg1;
@@ -17,20 +19,11 @@ public class Instruction {
         this.literal = null;
     }
 
-    public Instruction(OpCode op, String literal, int dest) {
-        this.op = op;
-        this.arg1 = CodeGenerator.NUL_VAL;
-        this.arg2 = CodeGenerator.NUL_VAL;
-        this.dest = dest;
-
-        this.literal = literal;
-    }
-
     public void setDest(int dest) {
         this.dest = dest;
     }
 
-    private String getName(int id) {
+    public String getName(int id) {
         if (id < 0) return "t" + (-id);
         return CodeGenerator.getVar(id).nom;
     }
@@ -40,8 +33,8 @@ public class Instruction {
             case SKIP -> "e" + dest + ": skip";
             case PMB -> "pmb " + CodeGenerator.getProc(dest).nom;
             case RTN -> "rtn " + CodeGenerator.getProc(dest).nom;
-            case COPY -> getName(dest) + " = " + (literal != null ? literal : getName(arg1));
-            case ADD -> getName(dest) + " = " + getName(arg1) + " + " + getName(arg2);
+            case COPY, COPY_STR -> getName(dest) + " = " + (literal != null ? literal : getName(arg1));
+            case ADD,CONCAT -> getName(dest) + " = " + getName(arg1) + " + " + getName(arg2);
             case SUB -> getName(dest) + " = " + getName(arg1) + " - " + getName(arg2);
             case PROD -> getName(dest) + " = " + getName(arg1) + " * " + getName(arg2);
             case DIV -> getName(dest) + " = " + getName(arg1) + " / " + getName(arg2);

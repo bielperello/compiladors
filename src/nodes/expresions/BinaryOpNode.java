@@ -1,6 +1,7 @@
 package nodes.expresions;
 
 import codegen.*;
+import nodes.Kind;
 
 import java.util.List;
 
@@ -60,7 +61,9 @@ public class BinaryOpNode extends ExprNode {
                 case "+", "-", "*", "/" -> {
                     int t = CodeGenerator.novaVarTemporal(); // t = novavar
                     OpCode op = switch (operator) {
-                        case "+" -> OpCode.ADD;
+                        case "+" -> {
+                            if (left.getKind() == Kind.CADENA) { yield OpCode.CONCAT;} else { yield OpCode.ADD;}
+                        }
                         case "-" -> OpCode.SUB;
                         case "*" -> OpCode.PROD;
                         case "/" -> OpCode.DIV;

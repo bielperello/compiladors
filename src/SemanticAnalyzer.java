@@ -1051,7 +1051,8 @@ public class SemanticAnalyzer {
         }
 
         DescripcioTipus tipusOp = un.getExpr().getDescripcioTipus();
-        Kind tsb = un.getKind();
+        Kind tsb = tipusOp.getTipusBase();
+        un.setKind(tsb);
         String op = (un.getOperator() != null) ? un.getOperator() : "?";
         DescripcioTipus resultat = cercaTipus(Kind.UNKNOWN);
 
@@ -1092,7 +1093,7 @@ public class SemanticAnalyzer {
 
 
     private boolean notNumeric(Kind k) {
-        return (k != Kind.DOUBLE && k != Kind.ENTER);
+        return (k != Kind.ENTER);
     }
 
     private boolean notBoolean(Kind k) {

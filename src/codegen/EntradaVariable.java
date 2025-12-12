@@ -10,6 +10,7 @@ public class EntradaVariable {
     public final Kind tsb;
     public final boolean isParam;
     public final int idProc;
+    public String bufferLabel;
 
     public EntradaVariable(int id, String nom, int ocup, int desp, Kind tsb, boolean isParam,int idProc) {
         this.id = id;
@@ -20,6 +21,8 @@ public class EntradaVariable {
         this.isParam = isParam;
         this.tsb = tsb;
     }
+
+    public void setBufferLabel(String bufferLabel) { this.bufferLabel = bufferLabel; }
 
     @Override
     public String toString() {

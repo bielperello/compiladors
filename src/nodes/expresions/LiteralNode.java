@@ -47,6 +47,13 @@ public class LiteralNode extends ExprNode {
                 this.falseList = List.of(pos);
                 this.trueList = List.of();
             }
+        } else if (this.value instanceof String) {
+            int t = CodeGenerator.novaVarTemporal(); // t = novavar
+            String label = CodeGenerator.literalString(this.value);
+
+            CodeGenerator.genera(OpCode.COPY, label, t); // t = label
+
+            this.resultVar = t; // E.r = t
         } else {
             int t = CodeGenerator.novaVarTemporal(); // t = novavar
             String literalText = String.valueOf(value);
@@ -55,6 +62,5 @@ public class LiteralNode extends ExprNode {
 
             this.resultVar = t; // E.r = t
         }
-
     }
 }

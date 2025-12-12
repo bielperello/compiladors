@@ -2,7 +2,6 @@ package nodes.expresions;
 
 import codegen.CodeGenerator;
 import codegen.OpCode;
-import nodes.TypeNode;
 
 public class UnaryOpNode extends ExprNode {
     private final ExprNode expr;
@@ -32,7 +31,7 @@ public class UnaryOpNode extends ExprNode {
             case "-" -> {
                 int operandVar = expr.getResultVar(); // E1.r
                 int t = CodeGenerator.novaVarTemporal(); // t = novavar
-                CodeGenerator.genera(OpCode.NEG, operandVar, CodeGenerator.NUL_VAL, t); // t = op E1.r
+                CodeGenerator.genera(OpCode.NEG, operandVar, t); // t = op E1.r
 
                 this.resultVar = t; // E0.r = t
             }
