@@ -61,7 +61,7 @@ public class CodeGenerator {
 
     public static int nouproc(String nom) {
         np++;
-        TP.afegir(new EntradaProcediment(np, nom));
+        TP.afegir(new EntradaProcediment(np, nom, nt));
         return np;
     }
 
@@ -83,7 +83,7 @@ public class CodeGenerator {
     }
 
     public static void registrarEtiquetaProc(int np, int ei) {
-        TP.get(np).setEi(ei);
+        TP.get(np).setEtiqueta(ei);
     }
 
     public static void registrarRetornProc(int np, int id) {
@@ -120,8 +120,10 @@ public class CodeGenerator {
     }
 
     public static void actualitzarProcediments() {
+        // actualitzar atributs dels procediments
         for(int x = 1; x <= nv; x++) {
             EntradaVariable ev = TV.get(x);
+
             if (!ev.isParam) {
                 int p = ev.idProc;
                 int ocupx = ev.ocupacio;
@@ -135,6 +137,12 @@ public class CodeGenerator {
                 TP.get(p).ocupPM = TP.get(p).ocupPM + ocupx;
                 ev.desp = ev.desp*TP.get(p).ocupPM;
             }
+        }
+
+        // evitar primerTemp amb un valor no desitjat si no té temporals
+        for (int y = 1; y <= np; y++) {
+            EntradaProcediment ep = TP.get(y);
+            if (ep.nTemporals == 0) ep.primerTemp = CodeGenerator.NUL_VAL;
         }
     }
 

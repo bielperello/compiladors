@@ -31,13 +31,18 @@ public class ProgramNode extends Node {
         int np = CodeGenerator.nouproc(this.getName()); // crear entrada a la taula de procediments
         CodeGenerator.pushProc(np); // pproc(profunditat) = np
 
-        int ei = EtiquetaManager.novaEtiqueta("E"); // etiqueta per l'inici
-        CodeGenerator.registrarEtiquetaProc(np, ei); // TP(np).ei = ei
-        CodeGenerator.posaEtiqueta(ei); // ei: skip
+        int eBloc = EtiquetaManager.novaEtiqueta("BLOC_EXEC_1");
+
+        CodeGenerator.registrarEtiquetaProc(np, eBloc); // TP(np).etiqueta = eBloc
+
+        if (!decls.isEmpty()) CodeGenerator.genera(OpCode.GOTO, eBloc); // goto eBloc
 
         for(DeclNode decl : decls) decl.generateCode();
+
+        CodeGenerator.posaEtiqueta(eBloc); // eBloc: skip
+
         for(InstrNode instr : instrs) instr.generateCode();
 
-        CodeGenerator.popProc();                        // sortir del context del principal
+        CodeGenerator.popProc(); // sortir del context del principal
     }
 }

@@ -85,7 +85,7 @@ terminal Symbol
             FUNCIO, ENDFUNCIO, TORNAR, CONST,
             OP_TIPUS_CADENA, OP_TIPUS_TUPLA, OP_TIPUS_CARACTER,
             OP_TIPUS_ENTER, OP_TIPUS_LOGIC,
-            PLUS, MINUS, TIMES, DIVIDE, GUIO,
+            PLUS, TIMES, DIVIDE, MENYS,
             EQ, NE, LT, LE, GT, GE, INPUT, OUTPUT,
             AND, OR, NOT, ASSIGNACIO, OBR_PAR,TANC_PAR,
             OBR_CORX, TANC_CORX, OBR_CLAU, TANC_CLAU, DOS_PUNTS,
@@ -124,7 +124,7 @@ precedence left AND;           // AND més baix que comparacions
 
 precedence nonassoc EQ, NE, LT, LE, GT, GE;   // comparadors no associatius
 
-precedence left PLUS, MINUS;    // suma i resta associatius a l'esquerra
+precedence left PLUS, MENYS;    // suma i resta associatius a l'esquerra
 precedence left TIMES, DIVIDE;  // multiplicació i divisió associatius a l'esquerra
 
 precedence right NOT;          // negació (NOT) té associativitat a la dreta
@@ -310,7 +310,7 @@ terme ::= literal:l
             {: RESULT = e; :}
         | NOT:n expr:e
             {: RESULT = new UnaryOpNode("NOT", e, nleft, nright); :}
-        | GUIO:g expr:e
+        | MENYS:g expr:e
             {: RESULT = new UnaryOpNode("-", e, gleft, gright); :}
 ;
 
@@ -346,7 +346,7 @@ expr_list ::= expr:e COMA expr_list:el
 
 op_arit ::= PLUS
             {: RESULT = "+"; :}
-        | MINUS
+        | MENYS
             {: RESULT = "-"; :}
         | TIMES
             {: RESULT = "*"; :}

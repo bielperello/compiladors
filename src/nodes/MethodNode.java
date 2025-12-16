@@ -45,9 +45,9 @@ public class MethodNode extends DeclNode {
         int np = CodeGenerator.nouproc(this.getId()); // crear entrada a la taula de procediments
         CodeGenerator.pushProc(np); // pproc(profunditat) = np
 
-        int ei = EtiquetaManager.novaEtiqueta("E"); // etiqueta per l'inici
-        CodeGenerator.registrarEtiquetaProc(np, ei); // TP(np).ei = ei
-        CodeGenerator.posaEtiqueta(ei); // ei: skip
+        int eBloc = EtiquetaManager.novaEtiqueta("BLOC_EXEC_" + np); // etiqueta per el bloc executable
+
+        CodeGenerator.registrarEtiquetaProc(np, eBloc); // TP(np).etiqueta = eBloc
 
         CodeGenerator.genera(OpCode.PMB, np); // pmb np
 
@@ -64,9 +64,13 @@ public class MethodNode extends DeclNode {
             CodeGenerator.registrarRetornProc(np, idRet);
         }
 
+        if (!decls.isEmpty()) CodeGenerator.genera(OpCode.GOTO, eBloc); // goto eBloc
+
         for(DeclNode decl : decls) {
             decl.generateCode(); // generació de codi de les declaracions locals
         }
+
+        CodeGenerator.posaEtiqueta(eBloc); // eBloc: skip
 
         for(InstrNode instr : instrs) {
             instr.generateCode(); // generació de codi de les instruccions del cos

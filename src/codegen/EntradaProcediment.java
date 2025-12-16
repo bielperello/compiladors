@@ -8,15 +8,17 @@ public class EntradaProcediment {
     public int nParams;
     public int nLocals;
     public int nTemporals;
-    public int ei;
+    public int etiqueta;
     public int idRet;
+    public int primerTemp;
 
     public int ocupVL;
     public int ocupPM;
 
-    public EntradaProcediment(int id, String nom) {
+    public EntradaProcediment(int id, String nom, int primerTemp) {
         this.id = id;
         this.nom = nom;
+        this.primerTemp = primerTemp;
         this.nParams = 0;
         this.nLocals = 0;
         this.nTemporals = 0;
@@ -24,7 +26,7 @@ public class EntradaProcediment {
         this.ocupPM = AssemblerGenerator.DESP_PARAMS;
     }
 
-    public void setEi(int ei) { this.ei = ei; }
+    public void setEtiqueta(int etiqueta) { this.etiqueta = etiqueta; }
     public void incrementParams() { this.nParams++; }
     public void incrementLocals() { this.nLocals++; }
     public void incrementTemporals() { this.nTemporals++; }
@@ -39,7 +41,7 @@ public class EntradaProcediment {
     public String toFullString() {
         return String.format(
                 "%3d | %-10s | params:%2d | locals:%2d | temps:%2d | label:%3d | idRet:%3d | ocupVL:%3d | ocupPM:%3d",
-                id, nom, nParams, nLocals, nTemporals, ei, idRet, ocupVL, ocupPM
+                id, nom, nParams, nLocals, nTemporals, etiqueta, idRet, ocupVL, ocupPM
         );
     }
 

@@ -46,7 +46,6 @@ public class Main {
                     assembler.writeToFile("prova");
 
                     System.out.println("Compilació finalitzada correctament.");
-
                 }
 
                 ErrorManager.printErrors();

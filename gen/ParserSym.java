@@ -6,66 +6,65 @@
 /** CUP generated class containing symbol constants. */
 public class ParserSym {
   /* terminals */
-  public static final int ENTER = 59;
-  public static final int DIVIDE = 29;
+  public static final int ENTER = 58;
+  public static final int DIVIDE = 28;
   public static final int OP_REP = 14;
   public static final int OP_ENDWHILE = 13;
-  public static final int DOS_PUNTS = 49;
+  public static final int DOS_PUNTS = 48;
   public static final int ENDPROCEDIMENT = 16;
-  public static final int ASSIGNACIO = 42;
+  public static final int ASSIGNACIO = 41;
   public static final int CONST = 20;
-  public static final int GE = 36;
-  public static final int OUTPUT = 38;
+  public static final int GE = 35;
+  public static final int OUTPUT = 37;
   public static final int OP_ENDIF = 7;
   public static final int ENDFUNCIO = 18;
-  public static final int INPUT = 37;
+  public static final int INPUT = 36;
   public static final int OP_WHILE = 11;
   public static final int OP_ELSE = 6;
   public static final int OP_DO = 12;
-  public static final int TANC_CLAU = 48;
-  public static final int MINUS = 27;
-  public static final int OBR_CLAU = 47;
+  public static final int TANC_CLAU = 47;
+  public static final int OBR_CLAU = 46;
   public static final int OP_THEN = 5;
   public static final int TORNAR = 19;
   public static final int PRINCIPAL = 2;
-  public static final int NOT = 41;
-  public static final int AND = 39;
-  public static final int LT = 33;
-  public static final int TANC_CORX = 46;
-  public static final int TANC_PAR = 44;
-  public static final int CARACTER = 58;
-  public static final int OBR_CORX = 45;
-  public static final int OR = 40;
-  public static final int FI = 55;
+  public static final int NOT = 40;
+  public static final int AND = 38;
+  public static final int MENYS = 29;
+  public static final int LT = 32;
+  public static final int TANC_CORX = 45;
+  public static final int TANC_PAR = 43;
+  public static final int CARACTER = 57;
+  public static final int OBR_CORX = 44;
+  public static final int OR = 39;
+  public static final int FI = 54;
   public static final int PROCEDIMENT = 15;
   public static final int PLUS = 26;
   public static final int FUNCIO = 17;
-  public static final int ID = 56;
-  public static final int OBR_PAR = 43;
-  public static final int LE = 34;
+  public static final int ID = 55;
+  public static final int OBR_PAR = 42;
+  public static final int LE = 33;
   public static final int EOF = 0;
   public static final int error = 1;
   public static final int OP_ENDSWITCH = 10;
   public static final int OP_TIPUS_CADENA = 21;
-  public static final int COMA = 50;
-  public static final int CADENA = 57;
+  public static final int COMA = 49;
+  public static final int CADENA = 56;
   public static final int DEFAULT_SWITCH = 9;
   public static final int OP_TIPUS_LOGIC = 25;
-  public static final int EQ = 31;
-  public static final int ERROR = 53;
-  public static final int GUIO = 30;
-  public static final int PUNT = 52;
+  public static final int EQ = 30;
+  public static final int ERROR = 52;
+  public static final int PUNT = 51;
   public static final int ENDPRINCIPAL = 3;
   public static final int OP_IF = 4;
-  public static final int TIMES = 28;
+  public static final int TIMES = 27;
   public static final int OP_TIPUS_ENTER = 24;
-  public static final int VALOR_LOGIC = 60;
+  public static final int VALOR_LOGIC = 59;
   public static final int OP_SWITCH = 8;
-  public static final int NE = 32;
-  public static final int PUNT_COMA = 51;
+  public static final int NE = 31;
+  public static final int PUNT_COMA = 50;
   public static final int OP_TIPUS_TUPLA = 22;
-  public static final int GT = 35;
-  public static final int INICI = 54;
+  public static final int GT = 34;
+  public static final int INICI = 53;
   public static final int OP_TIPUS_CARACTER = 23;
   public static final String[] terminalNames = new String[] {
   "EOF",
@@ -95,10 +94,9 @@ public class ParserSym {
   "OP_TIPUS_ENTER",
   "OP_TIPUS_LOGIC",
   "PLUS",
-  "MINUS",
   "TIMES",
   "DIVIDE",
-  "GUIO",
+  "MENYS",
   "EQ",
   "NE",
   "LT",

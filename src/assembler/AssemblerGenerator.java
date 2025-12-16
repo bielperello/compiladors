@@ -82,6 +82,7 @@ public class AssemblerGenerator {
             switch(instr.op) {
                 case SKIP:
                     asm.append("E").append(instr.dest).append(":\n");
+
                     break;
                 case GOTO:
                     asm.append("    BRA.W E").append(instr.dest).append("\n");
@@ -282,15 +283,20 @@ public class AssemblerGenerator {
     }
 
     private void generateProcedureRTN(int dest) {
-        asm.append("\n    MOVE.L 4(A6),DISP+").append(4*(dest-1)).append("\n");
-        asm.append("    UNLK A6\n");
+        asm.append("\n    MOVE.L 4(A6),DISP+").append(4*(dest-1)).append("\n"); // restaura el DISPLAY
+        asm.append("    UNLK A6\n"); // eliminar locals, temporals i recuperar antic BP
+        asm.append("    ADD.L #4,A7\n"); // eliminar antic DISP
         asm.append("    RTS\n\n");
     }
 
     private void generateInstruction(Instruction instr, int procId) {
-        String aDest = gestAddress(instr.dest, procId);
-        String aSrc1 = gestAddress(instr.arg1, procId);
-        String aSrc2 = gestAddress(instr.arg2, procId);
+        String aDest = null;
+        String aSrc1 = null;
+        String aSrc2 = null;
+
+        if (instr.dest != CodeGenerator.NUL_VAL) aDest = gestAddress(instr.dest, procId);
+        if (instr.arg1 != CodeGenerator.NUL_VAL) aSrc1 = gestAddress(instr.arg1, procId);
+        if (instr.arg2 != CodeGenerator.NUL_VAL) aSrc2 = gestAddress(instr.arg2, procId);
 
         switch(instr.op) {
             case COPY:
@@ -411,17 +417,20 @@ public class AssemblerGenerator {
             case CALL:
                 asm.append("    JSR E").append(instr.dest).append("\n");
 
-                int ocupPM = CodeGenerator.getProc(instr.dest - 1).ocupPM;
+                int ocupPM = CodeGenerator.getProc(instr.dest).ocupPM - DESP_PARAMS;
                 asm.append("    ADD.L #").append(ocupPM).append(",A7\n");
                 break;
         }
     }
 
     private String gestAddress(int id, int procId) {
-        // Temporals o locals: id < 0
+        // temporals o locals: id < 0
         if (id < 0) {
-            int tempIndex = -id;
-            int offset = (tempIndex + TP.get(procId).nLocals) * -4;
+            EntradaProcediment ep = TP.get(procId);
+
+            int globalIndex = -id;
+            int localIndex = (globalIndex + ep.primerTemp) + 1;
+            int offset = (localIndex + ep.nLocals) * -4;
             return offset + "(" + BP_LOCAL + ")";
         }
 

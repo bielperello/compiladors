@@ -8,7 +8,12 @@ public class EtiquetaManager {
 
     public static int novaEtiqueta(String prefix) {
         int id = ++counter;
-        map.put(prefix + id, id);
+        String nomEtiqueta;
+
+        if(prefix.equals("E")) nomEtiqueta = prefix + id;
+        else nomEtiqueta = prefix;
+
+        map.put(nomEtiqueta, id);
         return id;
     }
 }

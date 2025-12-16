@@ -1,10 +1,19 @@
-principal main :
-    inici
-        enter x := 10
+principal main:
+    enter X := 3
 
-        si (x == 10) llavors
-            enter x := 5
-        fsi
+    procediment suma (x: enter):
+        inici
+            mentre (X > 0) fer
+                x := x + 1
+                X := X - 1
+            fmentre
+
+            sortida(x)
+        fi
+    fiprocediment
+
+    inici
+        suma(4)
     fi
 fprincipal
 

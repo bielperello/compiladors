@@ -98,13 +98,12 @@ comentari = ##.*
 ","                  { return symbol(ParserSym.COMA);}
 ";"                  { return symbol(ParserSym.PUNT_COMA); }
 "."                  { return symbol(ParserSym.PUNT); }
-"-"                  { return symbol(ParserSym.GUIO); }
+"-"                  { return symbol(ParserSym.MENYS); }
 
 
 {op_aritmetic}       {
                           switch (yytext()) {
                               case "+" : return symbol(ParserSym.PLUS);
-                              case "-" : return symbol(ParserSym.MINUS);
                               case "*" : return symbol(ParserSym.TIMES);
                               case "/" : return symbol(ParserSym.DIVIDE);
                           }

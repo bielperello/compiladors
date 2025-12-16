@@ -953,7 +953,6 @@ public class AnaLex implements java_cup.runtime.Scanner {
           case 5:
             { switch (yytext()) {
                               case "+" : return symbol(ParserSym.PLUS);
-                              case "-" : return symbol(ParserSym.MINUS);
                               case "*" : return symbol(ParserSym.TIMES);
                               case "/" : return symbol(ParserSym.DIVIDE);
                           }
@@ -966,7 +965,7 @@ public class AnaLex implements java_cup.runtime.Scanner {
           // fall through
           case 56: break;
           case 7:
-            { return symbol(ParserSym.GUIO);
+            { return symbol(ParserSym.MENYS);
             }
           // fall through
           case 57: break;
