@@ -11,10 +11,13 @@ public class InstructionLiteral extends Instruction {
 
     @Override
     public String toReadableString() {
-        return switch (op) {
-            case COPY -> super.getName(dest) + " = " + literal;
-            default -> throw new IllegalStateException("Unexpected value: " + op);
-        };
+        return this.getName(dest) + " = " + this.literal;
+    }
+
+    @Override
+    public String toString() {
+        String d = (dest == CodeGenerator.NUL_VAL) ? "-" : String.valueOf(dest);
+        return String.format("%-7s %6s %4s", op, literal, d);
     }
 }
 

@@ -11,7 +11,6 @@ public class CodeGenerator {
     public static int np = 0;  // comptador procediments
     public static int nt = -1; // comptador temporals
     private static final List<Instruction> code = new ArrayList<>();
-    private static final List<String> codeReadable = new ArrayList<>();
 
     private static final TaulaVariables TV = new TaulaVariables();
     private static final TaulaProcediments TP = new TaulaProcediments();
@@ -165,8 +164,4 @@ public class CodeGenerator {
 
         return sb.toString();
     }
-
-    public static void printTV() { TV.print(); }
-    public static void printTP() { TP.print(); }
-    public static void printCode() { System.out.println(readableCode()); }
 }

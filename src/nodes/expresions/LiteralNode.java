@@ -36,28 +36,35 @@ public class LiteralNode extends ExprNode {
     @Override
     public void generateCode() {
         if (this.value instanceof Boolean) {
-            // cas literal booleà amb backpatching
-            CodeGenerator.genera(OpCode.GOTO, CodeGenerator.NUL_VAL);
-            int pos = CodeGenerator.pc();
+            if (this.mode == ModeExpr.MODERESULT) {
+                CodeGenerator.genera(OpCode.GOTO, CodeGenerator.NUL_VAL);
+                int pos = CodeGenerator.pc();
 
-            if ((Boolean) value) {
-                this.trueList = List.of(pos);
-                this.falseList = List.of();
+                if ((Boolean) value) {
+                    this.trueList = List.of(pos);
+                    this.falseList = List.of();
+                } else {
+                    this.falseList = List.of(pos);
+                    this.trueList = List.of();
+                }
             } else {
-                this.falseList = List.of(pos);
-                this.trueList = List.of();
+                int t = CodeGenerator.novaVarTemporal();
+                CodeGenerator.genera(OpCode.COPY, (Boolean) value ? "-1" : "0", t);
+
+                this.resultVar = t;
             }
+
         } else if (this.value instanceof String) {
             int t = CodeGenerator.novaVarTemporal(); // t = novavar
-            String label = CodeGenerator.literalString(this.value);
 
+            String label = CodeGenerator.literalString(this.value);
             CodeGenerator.genera(OpCode.COPY, label, t); // t = label
 
             this.resultVar = t; // E.r = t
         } else {
             int t = CodeGenerator.novaVarTemporal(); // t = novavar
-            String literalText = String.valueOf(value);
 
+            String literalText = String.valueOf(value);
             CodeGenerator.genera(OpCode.COPY, literalText, t); // t = lit
 
             this.resultVar = t; // E.r = t

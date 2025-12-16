@@ -51,18 +51,18 @@ public class DeclNode extends Node {
             if (expr != null) {
                 expr.generateCode();
 
-                if (type.getKind() == Kind.LOGIC) {
+                if (type.getKind() == Kind.LOGIC && expr.getMode() == ExprNode.ModeExpr.MODERESULT) {
                     // --- Inicialització booleana amb backpatching ---
                     int ec  = EtiquetaManager.novaEtiqueta("E");
                     int ef  = EtiquetaManager.novaEtiqueta("E");
                     int efi = EtiquetaManager.novaEtiqueta("E");
 
                     CodeGenerator.posaEtiqueta(ec);
-                    CodeGenerator.genera(OpCode.COPY, -1, varId);
+                    CodeGenerator.genera(OpCode.COPY, "-1", varId);
                     CodeGenerator.genera(OpCode.GOTO, efi);
 
                     CodeGenerator.posaEtiqueta(ef);
-                    CodeGenerator.genera(OpCode.COPY, 0, varId);
+                    CodeGenerator.genera(OpCode.COPY, "0", varId);
 
                     CodeGenerator.posaEtiqueta(efi);
 

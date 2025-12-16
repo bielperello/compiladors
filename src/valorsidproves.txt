@@ -1,7 +1,10 @@
 principal main :
     inici
-        logic x := cert
-        sortida(x)
+        enter x := 10
+
+        si (x == 10) llavors
+            enter x := 5
+        fsi
     fi
 fprincipal
 

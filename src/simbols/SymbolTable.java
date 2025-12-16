@@ -61,7 +61,7 @@ public class SymbolTable {
 
         // --- Tipus LOGIC (booleà) ---
         DescripcioTipus boolDesc = new DescripcioTipus(
-                "logic", Kind.LOGIC, 1
+                "logic", Kind.LOGIC, 4
         );
         this.add(new Simbol("logic", boolDesc, this.getScopeId()));
 

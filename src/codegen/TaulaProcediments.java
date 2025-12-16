@@ -23,8 +23,26 @@ public class TaulaProcediments {
         return null;
     }
 
-    public void print() {
-        System.out.println("\n--- Taula de Procediments ---");
-        llista.forEach(System.out::println);
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("--- Taula de Procediments ---\n");
+
+        for (EntradaProcediment ep : llista) {
+            sb.append(ep.toSummaryString()).append("\n");
+        }
+
+        return sb.toString();
+    }
+
+    public String toFullString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("--- Taula de Procediments ---\n");
+
+        for (EntradaProcediment ep : llista) {
+            sb.append(ep.toFullString()).append("\n");
+        }
+
+        return sb.toString();
     }
 }

@@ -30,9 +30,21 @@ public class EntradaProcediment {
     public void incrementTemporals() { this.nTemporals++; }
     public void setIdRet(int idRet) { this.idRet = idRet; }
 
+    public String toSummaryString() {
+        return String.format("%3d | %-10s | params:%2d | locals:%2d | temps:%2d | ocupVL:%3d",
+                id, nom, nParams, nLocals, nTemporals, ocupVL
+        );
+    }
+
+    public String toFullString() {
+        return String.format(
+                "%3d | %-10s | params:%2d | locals:%2d | temps:%2d | label:%3d | idRet:%3d | ocupVL:%3d | ocupPM:%3d",
+                id, nom, nParams, nLocals, nTemporals, ei, idRet, ocupVL, ocupPM
+        );
+    }
+
     @Override
     public String toString() {
-        return String.format("%3d | %-10s | params:%d | locals:%d | temporals:%d | ocupVL:%3d",
-                id, nom, nParams, nLocals, nTemporals, ocupVL);
+        return toSummaryString();
     }
 }

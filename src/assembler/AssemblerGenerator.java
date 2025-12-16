@@ -60,7 +60,11 @@ public class AssemblerGenerator {
         asm.append("HP: DS.L 1\n\n");
 
         // Buffer temporal per strings
-        asm.append("BTS: DS.B 512\n\n");
+        asm.append("BTS: DS.B 512\n");
+
+        // Cadena CERT i FALS per booleans
+        asm.append("\nCERT_STR: DC.B 'cert',0");
+        asm.append("\nFALS_STR: DC.B 'fals',0\n\n");
 
         // Darrera línia de codi
         asm.append("\tEND START");
@@ -149,7 +153,36 @@ public class AssemblerGenerator {
                             asm.append("    MOVE.L #5,D0\n");
                             asm.append("    TRAP #15\n");
                             asm.append("    MOVE.L D1,").append(varDest).append("\n");
-                        } else {
+                        } else if (instrIO.tsbIO == Kind.LOGIC) {
+                            if (instr.dest < 0) asm.append("    MOVE.L #BTS,").append(varDest).append("\n");
+
+                            asm.append("    MOVE.L ").append(varDest).append(",A1\n");
+                            asm.append("    MOVE.L #2,D0\n");
+                            asm.append("    TRAP #15\n");
+
+                            // comparar amb "cert"
+                            asm.append("    MOVE.L ").append(varDest).append(",A0\n");
+                            asm.append("    MOVE.L #CERT_STR,A1\n");
+
+                            asm.append("cmp_cert:\n");
+                            asm.append("    MOVE.B (A0)+,D0\n");
+                            asm.append("    MOVE.B (A1)+,D1\n");
+                            asm.append("    CMP.B D1,D0\n");
+                            asm.append("    BNE not_cert\n");
+                            asm.append("    TST.B D0\n");
+                            asm.append("    BNE cmp_cert\n");
+
+                            // És "cert" → -1
+                            asm.append("    MOVE.L #-1,").append(varDest).append("\n");
+                            asm.append("    BRA end_logic_read\n");
+
+                            // No és "cert" → fals
+                            asm.append("not_cert:\n");
+                            asm.append("    MOVE.L #0,").append(varDest).append("\n");
+
+                            asm.append("end_logic_read:\n");
+
+                        }else {
                             if (instr.dest < 0) asm.append("    MOVE.L #BTS,").append(varDest).append("\n");
 
                             // carregar punter al buffer associat
@@ -165,6 +198,20 @@ public class AssemblerGenerator {
                         } else if (instrIO.tsbIO == Kind.CARACTER) {
                             asm.append("    MOVE.L ").append(varDest).append(",D1\n");
                             asm.append("    MOVE.L #6,D0\n");
+                            asm.append("    TRAP #15\n");
+                        } else if (instrIO.tsbIO == Kind.LOGIC) {
+                            asm.append("    MOVE.L ").append(varDest).append(",D0\n");
+                            asm.append("    TST.L D0\n");
+                            asm.append("    BEQ print_f\n");
+
+                            asm.append("    MOVE.L #CERT_STR, A1\n");
+                            asm.append("    BRA print\n");
+
+                            asm.append("print_f:\n");
+                            asm.append("    MOVE.L #FALS_STR, A1\n");
+
+                            asm.append("print:\n");
+                            asm.append("    MOVE.L #13,D0\n");
                             asm.append("    TRAP #15\n");
                         } else {
                             asm.append("    MOVE.L ").append(varDest).append(",A1\n");
@@ -251,8 +298,12 @@ public class AssemblerGenerator {
                     // cas caràcter simple
                     if (instrLT.literal.length() == 1) {
                         char c = instrLT.literal.charAt(0);
-                        asm.append("    MOVE.L #").append((int) c).append(",").append(aDest).append("\n");
-                        break;
+
+                        // comprovar que no sigui caràcter nombre (0-9)
+                        if ((int) c < 48 || (int) c > 57) {
+                            asm.append("    MOVE.L #").append((int) c).append(",").append(aDest).append("\n");
+                            break;
+                        }
                     }
 
                     asm.append("    MOVE.L #").append(instrLT.literal).append(",").append(aDest).append("\n");
@@ -302,7 +353,7 @@ public class AssemblerGenerator {
 
                 if (instr.dest < 0) {
                     // buffer per temporals -> A1
-                    asm.append("    LEA BTS, A1\n");
+                    asm.append("    MOVE.L #BTS,A1\n");
                 } else {
                     // punter destí -> A1
                     asm.append("    MOVE.L ").append(aDest).append(",A1\n");
@@ -316,7 +367,7 @@ public class AssemblerGenerator {
 
                 if (instr.dest < 0) {
                     // buffer per temporals -> A1
-                    asm.append("    LEA BTS, A1\n");
+                    asm.append("    MOVE.L #BTS,A1\n");
                 } else {
                     // punter destí -> A1
                     asm.append("    MOVE.L ").append(aDest).append(",A1\n");

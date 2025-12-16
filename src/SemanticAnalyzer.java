@@ -876,76 +876,7 @@ public class SemanticAnalyzer {
         if (e == null) return;
 
         if (e instanceof BinaryOpNode bin) {
-            gest_expr(bin.getLeft());
-            gest_expr(bin.getRight());
-
-            DescripcioTipus tLeft = bin.getLeft().getDescripcioTipus();
-            DescripcioTipus tRight = bin.getRight().getDescripcioTipus();
-            Kind tsb_l = bin.getLeft().getKind();
-            Kind tsb_r = bin.getRight().getKind();
-
-            String op = bin.getOperator();
-
-            if (bin.getLeft().hasError() || bin.getRight().hasError()) {
-                e.setHasError(true);
-                e.setDescripcioTipus(cercaTipus(Kind.UNKNOWN));
-                e.setMode(ExprNode.ModeExpr.MODERESULT);
-                return;
-            }
-
-            DescripcioTipus resultat = cercaTipus(Kind.UNKNOWN);
-
-            // Operacions lògiques
-            if (op.equals("i") || op.equals("o")) {
-                if (notBoolean(tsb_l) || notBoolean(tsb_r)) {
-                    ErrorManager.add(new CompilerError(
-                            bin.line, bin.column, CompilerError.TYPE.SEMANTIC,
-                            "Operació lògica només permesa entre booleans."
-                    ));
-                    e.setHasError(true);
-                } else resultat = tLeft;
-            }
-
-            // Operacions relacionals
-            else if (List.of("==", "!=", "<", "<=", ">", ">=").contains(op)) {
-                if (!TipusUtils.sonCompatibles(tLeft.getTipusBase(), tRight.getTipusBase())) {
-                    ErrorManager.add(new CompilerError(
-                            bin.line, bin.column, CompilerError.TYPE.SEMANTIC,
-                            "Comparació entre tipus incompatibles: " +
-                                    tLeft.getTipusBase() + " i " + tRight.getTipusBase()
-                    ));
-                    e.setHasError(true);
-                }
-                resultat = cercaTipus(Kind.LOGIC);
-            }
-
-            // Operacions aritmètiques
-            else if (List.of("+", "-", "*", "/", "mod").contains(op)) {
-                if (op.equals("+") && isString(tLeft) && isString(tRight)) {
-                    resultat = cercaTipus(Kind.CADENA);
-                } else if (notNumeric(tsb_l) || notNumeric(tsb_r)) {
-                    ErrorManager.add(new CompilerError(
-                            bin.line, bin.column, CompilerError.TYPE.SEMANTIC,
-                            "Operació aritmètica només permesa entre valors numèrics."
-                    ));
-                    e.setHasError(true);
-                } else {
-                    resultat = tLeft;
-                }
-            }
-
-            // Operador desconegut
-            else {
-                ErrorManager.add(new CompilerError(
-                        bin.line, bin.column, CompilerError.TYPE.SEMANTIC,
-                        "Operador desconegut: " + op
-                ));
-                e.setHasError(true);
-            }
-
-            e.setKind(resultat.getTipusBase());
-            e.setDescripcioTipus(resultat);
-            e.setMode(ExprNode.ModeExpr.MODERESULT);
+            gest_expr_bin(e, bin);
             return;
         }
 
@@ -955,6 +886,83 @@ public class SemanticAnalyzer {
         if (e.hasError() && e.getDescripcioTipus() == null) {
             e.setDescripcioTipus(cercaTipus(Kind.UNKNOWN));
         }
+    }
+
+    // EXPR_BIN -> E OP E
+    public void gest_expr_bin(ExprNode e, BinaryOpNode bin) {
+        gest_expr(bin.getLeft());
+        gest_expr(bin.getRight());
+
+        DescripcioTipus tLeft = bin.getLeft().getDescripcioTipus();
+        DescripcioTipus tRight = bin.getRight().getDescripcioTipus();
+        Kind tsb_l = bin.getLeft().getKind();
+        Kind tsb_r = bin.getRight().getKind();
+
+        String op = bin.getOperator();
+
+        if (bin.getLeft().hasError() || bin.getRight().hasError()) {
+            e.setHasError(true);
+            e.setDescripcioTipus(cercaTipus(Kind.UNKNOWN));
+            e.setMode(ExprNode.ModeExpr.MODERESULT);
+            return;
+        }
+
+        DescripcioTipus resultat = cercaTipus(Kind.UNKNOWN);
+
+        // Operacions lògiques
+        if (op.equals("i") || op.equals("o")) {
+            if (notBoolean(tsb_l) || notBoolean(tsb_r)) {
+                ErrorManager.add(new CompilerError(
+                        bin.line, bin.column, CompilerError.TYPE.SEMANTIC,
+                        "Operació lògica només permesa entre booleans."
+                ));
+                e.setHasError(true);
+            } else resultat = tLeft;
+
+            bin.getLeft().setMode(ExprNode.ModeExpr.MODERESULT);
+            bin.getRight().setMode(ExprNode.ModeExpr.MODERESULT);
+        }
+
+        // Operacions relacionals
+        else if (List.of("==", "!=", "<", "<=", ">", ">=").contains(op)) {
+            if (!TipusUtils.sonCompatibles(tLeft.getTipusBase(), tRight.getTipusBase())) {
+                ErrorManager.add(new CompilerError(
+                        bin.line, bin.column, CompilerError.TYPE.SEMANTIC,
+                        "Comparació entre tipus incompatibles: " +
+                                tLeft.getTipusBase() + " i " + tRight.getTipusBase()
+                ));
+                e.setHasError(true);
+            }
+            resultat = cercaTipus(Kind.LOGIC);
+        }
+
+        // Operacions aritmètiques
+        else if (List.of("+", "-", "*", "/").contains(op)) {
+            if (op.equals("+") && isString(tLeft) && isString(tRight)) {
+                resultat = cercaTipus(Kind.CADENA);
+            } else if (notNumeric(tsb_l) || notNumeric(tsb_r)) {
+                ErrorManager.add(new CompilerError(
+                        bin.line, bin.column, CompilerError.TYPE.SEMANTIC,
+                        "Operació aritmètica només permesa entre valors numèrics."
+                ));
+                e.setHasError(true);
+            } else {
+                resultat = tLeft;
+            }
+        }
+
+        // Operador desconegut
+        else {
+            ErrorManager.add(new CompilerError(
+                    bin.line, bin.column, CompilerError.TYPE.SEMANTIC,
+                    "Operador desconegut: " + op
+            ));
+            e.setHasError(true);
+        }
+
+        e.setKind(resultat.getTipusBase());
+        e.setDescripcioTipus(resultat);
+        e.setMode(ExprNode.ModeExpr.MODERESULT);
     }
 
     // TERM -> VALOR_LIT | REF | CALL | NOT E | ( E ) | - E

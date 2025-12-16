@@ -15,8 +15,26 @@ public class TaulaVariables {
 
     public List<EntradaVariable> getList() { return this.llista; }
 
-    public void print() {
-        System.out.println("\n--- Taula de Variables ---");
-        llista.forEach(System.out::println);
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("--- Taula de Variables ---\n");
+
+        for (EntradaVariable ev : llista) {
+            sb.append(ev.toSummaryString()).append("\n");
+        }
+
+        return sb.toString();
+    }
+
+    public String toFullString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("--- Taula de Variables ---\n");
+
+        for (EntradaVariable ev : llista) {
+            sb.append(ev.toFullString()).append("\n");
+        }
+
+        return sb.toString();
     }
 }

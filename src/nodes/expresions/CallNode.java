@@ -34,7 +34,7 @@ public class CallNode extends RefNode {
             ExprNode param = expr.get(i);
             param.generateCode(); // generació de codi del paràmetre
 
-            if (param.getKind() == Kind.LOGIC) {
+            if (param.getKind() == Kind.LOGIC && param.getMode() == ExprNode.ModeExpr.MODERESULT) {
                 int t = CodeGenerator.novaVarTemporal(); // t = novavar
 
                 int ec = EtiquetaManager.novaEtiqueta("E"); // etiqueta per la branca certa

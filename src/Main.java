@@ -1,4 +1,6 @@
 import java.io.FileReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import assembler.AssemblerGenerator;
 import codegen.CodeGenerator;
@@ -31,13 +33,20 @@ public class Main {
                     ast.generateCode();
                     CodeGenerator.actualitzarProcediments();
 
-                    CodeGenerator.printTV();
-                    CodeGenerator.printTP();
-                    CodeGenerator.printCode();
+                    System.out.println(CodeGenerator.getTaulaVariables());
+                    // Files.writeString(Path.of("variables.txt"), CodeGenerator.getTaulaVariables().toFullString());
+                    System.out.println(CodeGenerator.getTaulaProcediments());
+                    // Files.writeString(Path.of("procediments.txt"), CodeGenerator.getTaulaProcediments().toFullString());
+                    System.out.println(CodeGenerator.readableCode());
+                    // Files.writeString(Path.of("codi3a.txt"), CodeGenerator.getCode().toString());
+                    // Files.writeString(Path.of("codi3a_r.txt"), CodeGenerator.readableCode());
 
                     AssemblerGenerator assembler = new AssemblerGenerator();
                     assembler.generate();
                     assembler.writeToFile("prova");
+
+                    System.out.println("Compilació finalitzada correctament.");
+
                 }
 
                 ErrorManager.printErrors();

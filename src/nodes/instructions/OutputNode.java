@@ -20,7 +20,7 @@ public class OutputNode extends InstrNode {
     public void generateCode() {
         expr.generateCode(); // generar el codi de l'expressió (E)
 
-        if (expr.getKind() == Kind.LOGIC) {
+        if (expr.getKind() == Kind.LOGIC && expr.getMode() == ExprNode.ModeExpr.MODERESULT) {
             int t = CodeGenerator.novaVarTemporal();
 
             int ec  = EtiquetaManager.novaEtiqueta("E");
@@ -28,18 +28,18 @@ public class OutputNode extends InstrNode {
             int efi = EtiquetaManager.novaEtiqueta("E");
 
             CodeGenerator.posaEtiqueta(ec);
-            CodeGenerator.genera(OpCode.COPY, -1, t);
+            CodeGenerator.genera(OpCode.COPY, "-1", t);
             CodeGenerator.genera(OpCode.GOTO, efi);
 
             CodeGenerator.posaEtiqueta(ef);
-            CodeGenerator.genera(OpCode.COPY, 0, t);
+            CodeGenerator.genera(OpCode.COPY, "0", t);
 
             CodeGenerator.posaEtiqueta(efi);
 
             CodeGenerator.backpatch(expr.getTrueList(), ec);
             CodeGenerator.backpatch(expr.getFalseList(), ef);
 
-            CodeGenerator.genera(OpCode.WRT, t);
+            CodeGenerator.genera(OpCode.WRT, t, expr.getKind());
         } else {
             int exprVar = expr.getResultVar();
             CodeGenerator.genera(OpCode.WRT, exprVar, expr.getKind());

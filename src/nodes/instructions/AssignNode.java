@@ -29,7 +29,7 @@ public class AssignNode extends InstrNode {
         int base = ref.getBaseVar();
         int offset = ref.getOffsetVar();
 
-        if (ref.getDescripcioTipus().getTipusBase() == Kind.LOGIC) {
+        if (expr.getKind() == Kind.LOGIC && expr.getMode() == ExprNode.ModeExpr.MODERESULT) {
             int ec = EtiquetaManager.novaEtiqueta("E"); // etiqueta per la branca certa
             int ef = EtiquetaManager.novaEtiqueta("E"); // etiqueta per la branca falsa
             int efi = EtiquetaManager.novaEtiqueta("E"); // etiqueta final de sentència
