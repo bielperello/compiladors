@@ -45,10 +45,12 @@ public class MethodNode extends DeclNode {
         int np = CodeGenerator.nouproc(this.getId()); // crear entrada a la taula de procediments
         CodeGenerator.pushProc(np); // pproc(profunditat) = np
 
-        int eBloc = EtiquetaManager.novaEtiqueta("BLOC_EXEC_" + np); // etiqueta per el bloc executable
+        int eInici = EtiquetaManager.novaEtiqueta(this.getId()); // etiqueta per el mètode
+        int eBloc = EtiquetaManager.novaEtiqueta("BE_" + this.getId()); // etiqueta per el bloc executable
 
-        CodeGenerator.registrarEtiquetaProc(np, eBloc); // TP(np).etiqueta = eBloc
+        CodeGenerator.registrarEtiquetaProc(np, eInici); // TP(np).etiqueta = eBloc
 
+        CodeGenerator.posaEtiqueta(eInici);
         CodeGenerator.genera(OpCode.PMB, np); // pmb np
 
         for(ArgNode arg : params) {
@@ -64,10 +66,16 @@ public class MethodNode extends DeclNode {
             CodeGenerator.registrarRetornProc(np, idRet);
         }
 
+        // DECLARACIONS EXECUTABLES (variables)
+        for (DeclNode decl : decls) {
+            if (!(decl instanceof MethodNode)) decl.generateCode(); // generació de codi de les variables locals
+        }
+
         if (!decls.isEmpty()) CodeGenerator.genera(OpCode.GOTO, eBloc); // goto eBloc
 
+        // DECLARACIONS NO EXECUTABLES (mètodes)
         for(DeclNode decl : decls) {
-            decl.generateCode(); // generació de codi de les declaracions locals
+            if (decl instanceof MethodNode) decl.generateCode();
         }
 
         CodeGenerator.posaEtiqueta(eBloc); // eBloc: skip

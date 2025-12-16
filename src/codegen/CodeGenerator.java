@@ -10,6 +10,9 @@ public class CodeGenerator {
     public static int nv = 0;  // comptador variables
     public static int np = 0;  // comptador procediments
     public static int nt = -1; // comptador temporals
+
+    private static Stack<Integer> comptadorTemporals = new Stack<>();
+
     private static final List<Instruction> code = new ArrayList<>();
 
     private static final TaulaVariables TV = new TaulaVariables();
@@ -66,16 +69,22 @@ public class CodeGenerator {
     }
 
     public static int novaVarTemporal() {
+        int comptador = comptadorTemporals.pop() + 1;
+        comptadorTemporals.push(comptador);
+
         TP.get(currentProc()).incrementTemporals();
-        return nt--;
+
+        return -comptador;
     }
 
     public static void pushProc(int np) {
         pproc.push(np);
+        comptadorTemporals.push(0);
     }
 
     public static void popProc() {
         pproc.pop();
+        comptadorTemporals.pop();
     }
 
     public static int currentProc() {

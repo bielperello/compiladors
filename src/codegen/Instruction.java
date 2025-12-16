@@ -30,7 +30,7 @@ public class Instruction {
 
     public String toReadableString() {
         return switch (op) {
-            case SKIP -> "e" + dest + ": skip";
+            case SKIP -> EtiquetaManager.getEtiqueta(dest) + ": skip";
             case PMB -> "pmb " + CodeGenerator.getProc(dest).nom;
             case RTN -> "rtn " + CodeGenerator.getProc(dest).nom;
             case COPY, COPY_STR -> getName(dest) + " = " + (literal != null ? literal : getName(arg1));
@@ -44,13 +44,13 @@ public class Instruction {
             case NOT -> getName(dest) + " = not " + getName(arg1);
             case IND_VAL -> getName(dest) + " = " + getName(arg1) + "[" + arg2 + "]";
             case IND_ASS -> getName(dest) + "[" + arg2 + "] = " + getName(arg1);
-            case IF_EQ -> "if " + getName(arg1) + " = " + getName(arg2) + " goto e" + dest;
-            case IF_NE -> "if " + getName(arg1) + " != " + getName(arg2) + " goto e" + dest;
-            case IF_LE -> "if " + getName(arg1) + " <= " + getName(arg2) + " goto e" + dest;
-            case IF_LT -> "if " + getName(arg1) + " < " + getName(arg2) + " goto e" + dest;
-            case IF_GE -> "if " + getName(arg1) + " >= " + getName(arg2) + " goto e" + dest;
-            case IF_GT -> "if " + getName(arg1) + " > " + getName(arg2) + " goto e" + dest;
-            case GOTO -> "goto e" + dest;
+            case IF_EQ -> "if " + getName(arg1) + " = " + getName(arg2) + " goto " + EtiquetaManager.getEtiqueta(dest);
+            case IF_NE -> "if " + getName(arg1) + " != " + getName(arg2) + " goto " + EtiquetaManager.getEtiqueta(dest);
+            case IF_LE -> "if " + getName(arg1) + " <= " + getName(arg2) + " goto " + EtiquetaManager.getEtiqueta(dest);
+            case IF_LT -> "if " + getName(arg1) + " < " + getName(arg2) + " goto " + EtiquetaManager.getEtiqueta(dest);
+            case IF_GE -> "if " + getName(arg1) + " >= " + getName(arg2) + " goto " + EtiquetaManager.getEtiqueta(dest);
+            case IF_GT -> "if " + getName(arg1) + " > " + getName(arg2) + " goto " + EtiquetaManager.getEtiqueta(dest);
+            case GOTO -> "goto " + EtiquetaManager.getEtiqueta(dest);
             case PARAM_S -> "param_s " + getName(dest);
             case PARAM_C -> "param_c " + getName(dest) + "[" + getName(arg1) + "]";
             case CALL -> "call " + CodeGenerator.getProc(dest).nom;

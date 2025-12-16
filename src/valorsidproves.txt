@@ -13,7 +13,7 @@ principal main:
     fiprocediment
 
     inici
-        suma(4)
+        suma(p)
     fi
 fprincipal
 

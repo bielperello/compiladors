@@ -428,9 +428,7 @@ public class AssemblerGenerator {
         if (id < 0) {
             EntradaProcediment ep = TP.get(procId);
 
-            int globalIndex = -id;
-            int localIndex = (globalIndex + ep.primerTemp) + 1;
-            int offset = (localIndex + ep.nLocals) * -4;
+            int offset = (-id + ep.nLocals) * -4;
             return offset + "(" + BP_LOCAL + ")";
         }
 
