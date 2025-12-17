@@ -39,7 +39,6 @@ public class MethodNode extends DeclNode {
     // ======================
     // Generació de codi
     // ======================
-
     @Override
     public void generateCode() {
         int np = CodeGenerator.nouproc(this.getId()); // crear entrada a la taula de procediments
@@ -57,13 +56,6 @@ public class MethodNode extends DeclNode {
             DescripcioTipus dt = arg.getDescripcioTipus();
             CodeGenerator.novavar(arg.getName(), dt.getOcupacio(), 1, dt.getTipusBase(), true, np);
             CodeGenerator.getProc(np).incrementParams();
-        }
-
-        // --- VARIABLE DE RETORN ---
-        int idRet = -1;
-        if (this.isFunction) {
-            idRet = CodeGenerator.novaVarTemporal();
-            CodeGenerator.registrarRetornProc(np, idRet);
         }
 
         // DECLARACIONS EXECUTABLES (variables)
@@ -84,12 +76,13 @@ public class MethodNode extends DeclNode {
             instr.generateCode(); // generació de codi de les instruccions del cos
         }
 
-        if (this.isFunction) { // reservar variable de retorn
+        // --- RETURN ---
+        if (this.isFunction) {
             ExprNode retExpr = this.getExpr();
             retExpr.generateCode();
             int retVar = retExpr.getResultVar();
 
-            CodeGenerator.genera(OpCode.COPY, retVar, idRet);
+            CodeGenerator.genera(OpCode.COPY_RTN, retVar);
 
         }
 

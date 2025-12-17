@@ -10,15 +10,12 @@ public class EntradaProcediment {
     public int nTemporals;
     public int etiqueta;
     public int idRet;
-    public int primerTemp;
-
     public int ocupVL;
     public int ocupPM;
 
-    public EntradaProcediment(int id, String nom, int primerTemp) {
+    public EntradaProcediment(int id, String nom) {
         this.id = id;
         this.nom = nom;
-        this.primerTemp = primerTemp;
         this.nParams = 0;
         this.nLocals = 0;
         this.nTemporals = 0;

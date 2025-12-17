@@ -20,6 +20,7 @@ public class AssemblerGenerator {
 
     private final String DISP_REGISTER = "A0";
     private final String BP_LOCAL = "A6";
+    private final String REG_RTN = "D0";
     private final int MIDA_MAX_STR = 512;
 
     public static final int DESP_PARAMS = 8;
@@ -223,6 +224,14 @@ public class AssemblerGenerator {
                     }
 
                     break;
+                case COPY_RTN, READ_RTN:
+                    if (instr.op == OpCode.COPY_RTN) {
+                        asm.append("    MOVE.L ").append(gestAddress(instr.dest, procActual))
+                                .append(",").append(REG_RTN).append("\n");
+                    } else {
+                        asm.append("    MOVE.L ").append(REG_RTN).append(",")
+                                .append(gestAddress(instr.dest, procActual)).append("\n");
+                    }
                 default:
                     generateInstruction(instr, procActual);
                     break;
@@ -387,11 +396,14 @@ public class AssemblerGenerator {
                 }
 
                 break;
-            case NEG, NOT:
+            case NOT, NEG:
                 asm.append("    MOVE.L ").append(aSrc1).append(",").append(aDest).append("\n");
-                asm.append("    MOVE.L ").append(aDest).append(",D0\n");
-                asm.append("    NOT.L D0\n");
-                asm.append("    MOVE.L D0,").append(aDest).append("\n");
+
+                if (instr.op == OpCode.NOT) {
+                    asm.append("    NOT.L ").append(aDest).append("\n");
+                } else {
+                    asm.append("    NEG.L ").append(aDest).append("\n");
+                }
 
                 break;
             case AND, OR:

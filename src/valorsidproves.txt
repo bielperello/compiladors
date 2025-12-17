@@ -1,19 +1,16 @@
 principal main:
-    enter X := 3
-
-    procediment suma (x: enter):
-        inici
-            mentre (X > 0) fer
-                x := x + 1
-                X := X - 1
-            fmentre
-
-            sortida(x)
-        fi
-    fiprocediment
+    enter x
+    tupla {edat: enter} p
+    funcio enter suma (x: enter, y: enter):
+        tornar x + y
+    fifuncio
 
     inici
-        suma(p)
+        p persona
+        persona.edat := suma(10, 5)
+        x := suma(persona.edat, 6)
+        sortida(persona.edat)
+        sortida(x)
     fi
 fprincipal
 

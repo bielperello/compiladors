@@ -64,7 +64,7 @@ public class CodeGenerator {
 
     public static int nouproc(String nom) {
         np++;
-        TP.afegir(new EntradaProcediment(np, nom, nt));
+        TP.afegir(new EntradaProcediment(np, nom));
         return np;
     }
 
@@ -146,12 +146,6 @@ public class CodeGenerator {
                 TP.get(p).ocupPM = TP.get(p).ocupPM + ocupx;
                 ev.desp = ev.desp*TP.get(p).ocupPM;
             }
-        }
-
-        // evitar primerTemp amb un valor no desitjat si no té temporals
-        for (int y = 1; y <= np; y++) {
-            EntradaProcediment ep = TP.get(y);
-            if (ep.nTemporals == 0) ep.primerTemp = CodeGenerator.NUL_VAL;
         }
     }
 

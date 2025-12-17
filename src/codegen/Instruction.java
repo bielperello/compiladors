@@ -33,7 +33,7 @@ public class Instruction {
             case SKIP -> EtiquetaManager.getEtiqueta(dest) + ": skip";
             case PMB -> "pmb " + CodeGenerator.getProc(dest).nom;
             case RTN -> "rtn " + CodeGenerator.getProc(dest).nom;
-            case COPY, COPY_STR -> getName(dest) + " = " + (literal != null ? literal : getName(arg1));
+            case COPY -> getName(dest) + " = " + (literal != null ? literal : getName(arg1));
             case ADD,CONCAT -> getName(dest) + " = " + getName(arg1) + " + " + getName(arg2);
             case SUB -> getName(dest) + " = " + getName(arg1) + " - " + getName(arg2);
             case PROD -> getName(dest) + " = " + getName(arg1) + " * " + getName(arg2);
@@ -56,6 +56,8 @@ public class Instruction {
             case CALL -> "call " + CodeGenerator.getProc(dest).nom;
             case WRT -> "wrt " + getName(dest);
             case READ -> "read " + getName(dest);
+            case COPY_RTN -> "rtn = " + getName(dest);
+            case READ_RTN -> getName(dest) + " = rtn";
         };
     }
 
