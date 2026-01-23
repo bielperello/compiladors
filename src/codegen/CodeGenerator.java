@@ -1,6 +1,6 @@
 package codegen;
 
-import nodes.Kind;
+import ast.Kind;
 
 import java.util.*;
 
@@ -9,11 +9,10 @@ public class CodeGenerator {
 
     public static int nv = 0;  // comptador variables
     public static int np = 0;  // comptador procediments
-    public static int nt = -1; // comptador temporals
 
     private static Stack<Integer> comptadorTemporals = new Stack<>();
 
-    private static final List<Instruction> code = new ArrayList<>();
+    private static List<Instruction> code = new ArrayList<>();
 
     private static final TaulaVariables TV = new TaulaVariables();
     private static final TaulaProcediments TP = new TaulaProcediments();
@@ -31,6 +30,10 @@ public class CodeGenerator {
 
     public static void genera(OpCode op, String literal, int dest) {
         code.add(new InstructionLiteral(op, literal, dest));
+    }
+
+    public static void genera(OpCode op, String literal, int arg1 ,int dest) {
+        code.add(new InstructionLiteral(op, literal, arg1, dest));
     }
 
     public static void genera(OpCode op, int dest, Kind tsbIO) {
@@ -95,10 +98,6 @@ public class CodeGenerator {
         TP.get(np).setEtiqueta(ei);
     }
 
-    public static void registrarRetornProc(int np, int id) {
-        TP.get(np).setIdRet(id);
-    }
-
     public static EntradaProcediment getProc(int id) {
         return TP.get(id);
     }
@@ -151,6 +150,7 @@ public class CodeGenerator {
 
     public static String literalString(Object value) {
         String text = value.toString();
+        text = text.replace("'", "''");
 
         if (stringLiterals.containsKey(text)) {
             return stringLiterals.get(text);

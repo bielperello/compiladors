@@ -1,0 +1,25 @@
+package ast;
+
+/**
+ * @author Biel Perelló
+ */
+public abstract class Node {
+    public int line;
+    public int column;
+    private boolean hasError = false;
+
+    public Node(int line, int column) {
+        this.line = line;
+        this.column = column;
+    }
+
+    public abstract void generateCode();
+
+    public boolean hasError() {
+        return hasError;
+    }
+
+    public void setHasError(boolean value) {
+        this.hasError = value;
+    }
+}

@@ -1,7 +1,5 @@
 package codegen;
 
-import nodes.Kind;
-
 public class Instruction {
     public final OpCode op;
     public final int arg1;

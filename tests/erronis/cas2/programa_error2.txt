@@ -1,0 +1,32 @@
+principal err02:
+    enter res
+    cadena text
+
+    procediment imprimeix(m: cadena):
+        inici
+            sortida(m)
+        fi
+    fiprocediment
+
+    funcio enter suma(a: enter, b: enter):
+        inici
+            cadena t
+            si (a >= b) llavors
+                t := "0"
+            sino
+                t := 'A' ## (1) Assignació de tipus incorrecte: cadena <- caràcter
+            fsi
+        fi
+        tornar t ## (2) Retorn de tipus incorrecte: enter <- cadena
+    fifuncio
+
+    inici
+        res := imprimeix("Hola")     ## (3) Intent d'assignar el resultat d'un procediment (no retorna)
+
+        text := suma(3, 4)           ## (4) Assignació incompatible: cadena <- enter
+
+        res := suma(10)              ## (5) Nombre de paràmetres incorrecte a la funció
+
+        imprimeix(5)                 ## (6) Tipus de paràmetre incorrecte: espera cadena, rep enter
+    fi
+fprincipal

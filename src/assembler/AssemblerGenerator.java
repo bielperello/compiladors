@@ -1,7 +1,7 @@
 package assembler;
 
 import codegen.*;
-import nodes.Kind;
+import ast.Kind;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -25,10 +25,10 @@ public class AssemblerGenerator {
 
     public static final int DESP_PARAMS = 8;
 
-    public AssemblerGenerator() {
+    public AssemblerGenerator(List<Instruction> code) {
         this.TV = CodeGenerator.getTaulaVariables();
         this.TP = CodeGenerator.getTaulaProcediments();
-        this.code = CodeGenerator.getCode();
+        this.code = code;
         asm = new StringBuilder();
     }
 
@@ -129,16 +129,21 @@ public class AssemblerGenerator {
                     String aDest = gestAddress(instr.dest, procActual);
                     String aBase = gestAddress(instr.arg1, procActual);
 
-                    asm.append("    MOVE.L -").append(instr.arg2).append("").append(aBase).append(",D0\n");
+                    asm.append("    MOVE.L ").append(instr.arg2).append(aBase).append(",D0\n");
                     asm.append("    MOVE.L D0,").append(aDest).append("\n");
 
                     break;
                 case IND_ASS:
                     String aDestBase = gestAddress(instr.dest, procActual);
-                    String aSrc = gestAddress(instr.arg1, procActual);
 
-                    asm.append("    MOVE.L ").append(aSrc).append(",D0\n");
-                    asm.append("    MOVE.L D0,-").append(instr.arg2).append(aDestBase).append("\n");
+                    if(instr instanceof InstructionLiteral) {
+                        asm.append("    MOVE.L #").append(instr.literal).append(",")
+                                .append(instr.arg2).append(aDestBase).append("\n");
+                    } else {
+                        String aSrc = gestAddress(instr.arg1, procActual);
+                        asm.append("    MOVE.L ").append(aSrc).append(",D0\n");
+                        asm.append("    MOVE.L D0,").append(instr.arg2).append(aDestBase).append("\n");
+                    }
 
                     break;
                 case WRT, READ:
@@ -332,13 +337,7 @@ public class AssemblerGenerator {
                     break;
                 }
 
-                /*
-                asm.append("    MOVE.L ").append(aSrc1).append(",D0\n");
-                asm.append("    MOVE.L D0,").append(aDest).append("\n");
-                 */
-
                 asm.append("    MOVE.L ").append(aSrc1).append(",").append(aDest).append("\n");
-
 
                 break;
             case ADD,SUB,PROD,DIV:
@@ -356,6 +355,8 @@ public class AssemblerGenerator {
                     asm.append("    MULS D1,D0\n");
                 } else {
                     asm.append("    DIVS D1,D0\n");
+                    asm.append("    MOVE.W D0,D0\n");
+                    asm.append("    EXT.L D0\n");
                 }
 
                 // resultat → destí
@@ -473,9 +474,5 @@ public class AssemblerGenerator {
         } catch (IOException e) {
             throw new RuntimeException("Error escrivint fitxer ASM: " + filename, e);
         }
-    }
-
-    public void readOffFile(String filename) {
-
     }
 }

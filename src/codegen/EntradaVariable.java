@@ -1,6 +1,6 @@
 package codegen;
 
-import nodes.Kind;
+import ast.Kind;
 
 public class EntradaVariable {
     public final int id;
@@ -26,13 +26,13 @@ public class EntradaVariable {
 
     public String toSummaryString() {
         return String.format(
-                "%3d | %-10s | %-6s | desp:%4d | proc:%d", id, nom, tsb.toString().toLowerCase(), desp, idProc
+                "%3d | %-16s | %-6s | desp:%4d | proc:%d", id, nom, tsb.toString().toLowerCase(), desp, idProc
         );
     }
 
     public String toFullString() {
         return String.format(
-                "%3d | %-10s | ocup:%2d | desp:%4d | %-6s | param:%5s | proc:%d | buf:%s",
+                "%3d | %-16s | ocup:%2d | desp:%4d | %-6s | param:%5s | proc:%d | buf:%s",
                 id, nom, ocupacio, desp, tsb.toString().toLowerCase(), isParam, idProc,
                 bufferLabel != null ? bufferLabel : "-"
         );

@@ -16,30 +16,25 @@ public class CompilerError {
     }
 
     public CompilerError(TYPE type, String message) {
-        this.line = 0;
-        this.column = 0;
-        this.type = type;
-        this.message = message;
+        this(0, 0, type, message);
     }
 
-    public int getLine() {
-        return line;
-    }
+    public int getLine() { return line; }
+    public int getColumn() { return column; }
+    public TYPE getType() { return type; }
+    public String getMessage() { return message; }
 
-    public int getColumn() {
-        return column;
-    }
-
-    public TYPE getType() {
-        return type;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
+    /** Per consola */
     @Override
     public String toString() {
-        return String.format("Error %s a línia %d, columna %d: %s", type, line, column, message);
+        if (line > 0) {
+            return String.format("[%s] línia %d, col %d: %s", type, line, column, message);
+        }
+        return String.format("[%s] %s", type, message);
+    }
+
+    /** Per fitxer (una fila) */
+    public String toFileRow() {
+        return String.format("%-9s\t%5d\t%5d\t%s", type, line, column, message);
     }
 }

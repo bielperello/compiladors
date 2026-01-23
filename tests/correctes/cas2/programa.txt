@@ -1,0 +1,37 @@
+principal prova02:
+    tupla {nom: cadena, temperatura: enter, actiu: logic, codi: caracter} Sensor
+
+    Sensor s
+    enter nivell_alerta
+
+    funcio enter calcula_alerta(temp: enter, actiu: logic):
+        inici
+            enter codi
+            si ((temp > 70 i actiu) o (temp > 90)) llavors
+                codi := 2
+            sino
+                codi :=  1
+            fsi
+        fi
+        tornar codi
+    fifuncio
+
+    inici
+        s.nom := "Sensor Central"
+        s.temperatura := 70
+        s.actiu := cert
+        s.codi := 'S'
+
+        nivell_alerta := calcula_alerta(s.temperatura, s.actiu)
+        cadena nomS := s.nom
+
+        cas nivell_alerta:
+            1:
+                sortida("Estat normal del sensor " + nomS)
+            2:
+                sortida("ALERTA: temperatura elevada del sensor " + nomS)
+            altre:
+                sortida("Estat desconegut")
+        fcas
+    fi
+fprincipal

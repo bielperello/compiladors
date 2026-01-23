@@ -1,0 +1,16 @@
+principal err01:
+    enter x
+    enter x      ## (1) Identificador duplicat al mateix àmbit
+
+    inici
+        y := 3   ## (2) Variable no declarada (y)
+
+        x := "hola"  ## (3) Assignació incompatible: enter := cadena
+
+        si ("cert") llavors   ## (4) Condició no és logic (és cadena)
+            sortida("dins si")
+        fsi
+
+        mostra_majoria(x)  ## (5) Crida a procediment/funció no declarat (o firma incorrecta)
+    fi
+fprincipal

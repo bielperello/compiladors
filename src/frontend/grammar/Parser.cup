@@ -1,0 +1,376 @@
+/**
+ * Assignatura 21742 - Compiladors
+ * Estudis: Grau en Informàtica
+ * Itinerari: Computació
+ * Curs: 2025-2026
+ *
+ * Professor: Pere Palmer
+ *
+ * Generar:
+ * java -jar java-cup-11b.jar -expect 36 -parser Parser -symbols ParserSym -destdir src/frontend/parser src/frontend/grammar/Parser.cup
+ */
+package frontend.parser;
+
+import java_cup.runtime.*;
+import ast.*;
+import ast.expresions.*;
+import ast.instructions.*;
+import ast.instructions.conditionals.*;
+import ast.instructions.loops.*;
+import errors.*;
+import java.util.*;
+
+class Parser;
+
+parser code {:
+    public <T> List<T> combinar(T first, List<T> rest) {
+        List<T> list = new ArrayList<>();
+        list.add(first);
+        if (rest != null) list.addAll(rest);
+        return list;
+    }
+
+    public <T> List<T> crearLlista(T item) {
+        List<T> list = new ArrayList<>();
+        list.add(item);
+        return list;
+    }
+
+    @Override
+    public void report_error(String message, Object info) {
+        Symbol s = (Symbol) info;
+        int line = (s != null) ? (s.left + 1) : -1;
+        int column = (s != null) ? (s.right + 1) : -1;
+        String text = (s != null && s.value != null) ? s.value.toString() : "";
+        ErrorManager.add(new CompilerError(
+            line, column, CompilerError.TYPE.SINTACTIC,
+            "Error sintàctic prop de '" + text + "': " + message
+        ));
+    }
+
+    @Override
+    public void syntax_error(Symbol s) {
+        int line = (s != null) ? s.left : -1;
+        int column = (s != null) ? s.right : -1;
+
+        String tokenName = (s != null) ? ParserSym.terminalNames[s.sym] : "desconegut";
+
+        String text = (s != null && s.value != null) ? s.value.toString() : "";
+        ErrorManager.add(new CompilerError(
+            line, column, CompilerError.TYPE.SINTACTIC,
+            "Error de sintaxi: token inesperat '" + tokenName + "'"
+        ));
+    }
+
+    @Override
+        public void unrecovered_syntax_error(Symbol s) {
+            int line = (s != null) ? s.left : -1;
+            int column = (s != null) ? s.right : -1;
+
+            String tokenName = (s != null) ? ParserSym.terminalNames[s.sym] : "desconegut";
+
+            String text = (s != null && s.value != null) ? s.value.toString() : "";
+            ErrorManager.add(new CompilerError(
+                line, column, CompilerError.TYPE.SINTACTIC,
+                "Error greu de sintaxi: token inesperat '" + tokenName + "'"
+            ));
+        }
+:}
+
+terminal Symbol
+            PRINCIPAL, ENDPRINCIPAL,
+            OP_IF, OP_THEN, OP_ELSE, OP_ENDIF,
+            OP_SWITCH, DEFAULT_SWITCH, OP_ENDSWITCH,
+            OP_WHILE, OP_DO, OP_ENDWHILE,
+            OP_REP, PROCEDIMENT, ENDPROCEDIMENT,
+            FUNCIO, ENDFUNCIO, TORNAR, CONST,
+            OP_TIPUS_CADENA, OP_TIPUS_TUPLA, OP_TIPUS_CARACTER,
+            OP_TIPUS_ENTER, OP_TIPUS_LOGIC,
+            PLUS, TIMES, DIVIDE, MENYS,
+            EQ, NE, LT, LE, GT, GE, INPUT, OUTPUT,
+            AND, OR, NOT, ASSIGNACIO, OBR_PAR,TANC_PAR,
+            OBR_CORX, TANC_CORX, OBR_CLAU, TANC_CLAU, DOS_PUNTS,
+            COMA, PUNT_COMA, PUNT, ERROR, INICI, FI;
+
+terminal String ID, CADENA;
+terminal Character CARACTER;
+terminal Double ENTER;
+terminal Boolean VALOR_LOGIC;
+
+non terminal ProgramNode program;
+non terminal List<DeclNode> decls, safe_decls;
+non terminal List<InstrNode> instrs, bloc, optional_cond;
+non terminal DeclNode decl;
+non terminal InstrNode instr,  entrada, sortida;
+non terminal CallNode call;
+non terminal CondNode cond;
+non terminal CaseNode cas_opcio;
+non terminal LoopNode loop;
+non terminal MethodNode method;
+non terminal TypeNode tipus;
+non terminal ExprNode assig, expr, terme, return_func;
+non terminal LiteralNode literal;
+non terminal ExprNode expr_logic, expr_rel, expr_arit;
+non terminal RefNode ref;
+non terminal ArgNode arg;
+non terminal List<ArgNode> args;
+non terminal List<CaseNode> cas_opcions;
+non terminal String op_arit, op_rel, op_log;
+non terminal List<ExprNode> expr_list;
+non terminal AssignNode assign_instr;
+
+// Associativitat i precedència dels operadors
+precedence left OR;            // OR més baix que AND
+precedence left AND;           // AND més baix que comparacions
+
+precedence nonassoc EQ, NE, LT, LE, GT, GE;   // comparadors no associatius
+
+precedence left PLUS, MENYS;    // suma i resta associatius a l'esquerra
+precedence left TIMES, DIVIDE;  // multiplicació i divisió associatius a l'esquerra
+
+precedence right NOT;          // negació (NOT) té associativitat a la dreta
+
+start with program;
+
+program ::= PRINCIPAL:p ID:id DOS_PUNTS safe_decls:d bloc:b ENDPRINCIPAL
+            {: RESULT = new ProgramNode(id, d, b, pleft, pright); :}
+;
+
+safe_decls ::= decls:d
+            {: RESULT = d; :}
+        | error:e decls:d
+            {:
+                ErrorManager.add(new CompilerError(
+                    eleft, eright, CompilerError.TYPE.SINTACTIC,
+                    "Error sintàctic: declaració ignorada."
+                ));
+                RESULT = d;
+            :}
+;
+
+decls ::= decl:d decls:ds
+            {: RESULT = combinar(d, ds); :}
+        | method:m decls:ds
+            {: RESULT = combinar(m, ds); :}
+        | /* buit */
+            {: RESULT = new ArrayList<DeclNode>(); :}
+;
+
+decl ::= tipus:t ID:id assig:a
+            {: RESULT = new DeclNode(t, id, a, false, t.line, t.column); :}
+        | CONST:c tipus:t ID:id ASSIGNACIO expr:e
+            {: RESULT = new DeclNode(t, id, e, true, t.line, t.column); :}
+;
+
+method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS safe_decls:d bloc:b return_func:r ENDFUNCIO
+            {: RESULT = new MethodNode(true, id, t, a, d, b, r, fleft, fright); :}
+        | PROCEDIMENT:p ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS safe_decls:d bloc:b ENDPROCEDIMENT
+            {: RESULT = new MethodNode(false, id, new TypeNode(Kind.VOID, pleft, pright),
+                                      a, d, b, null, pleft, pright); :}
+;
+
+return_func ::= TORNAR expr:e
+            {: RESULT = e; :}
+;
+
+bloc ::= INICI instrs:is FI
+          {: RESULT = is; :}
+       | /* buit */
+          {: RESULT = new ArrayList<InstrNode>(); :}
+;
+
+instrs ::= instr:i instrs:is
+            {: RESULT = combinar(i, is); :}
+        | error:e instrs:ds
+            {:
+                ErrorManager.add(new CompilerError(
+                    eleft, eright, CompilerError.TYPE.SINTACTIC,
+                    "Error sintàctic: instrucció ignorada."
+                ));
+                RESULT = ds;
+            :}
+        | /* buit */
+            {: RESULT = new ArrayList<InstrNode>(); :}
+;
+
+instr ::= ref:r
+            {: RESULT = new InstrNode.InstrRefNode(r); :}
+        | cond:c
+            {: RESULT = c; :}
+        | loop:l
+            {: RESULT = l; :}
+        | entrada:e
+            {: RESULT = e; :}
+        | sortida:s
+            {: RESULT = s; :}
+        | assign_instr:a
+            {: RESULT = a; :}
+        | decl:d
+            {: RESULT = new InstrNode.InstrDeclNode(d); :}
+;
+
+assign_instr ::= ref:r ASSIGNACIO expr:e
+            {: RESULT = new AssignNode(r, e, rleft, rright); :}
+;
+
+cond ::= OP_IF:op OBR_PAR expr:e TANC_PAR OP_THEN instrs:i optional_cond:o OP_ENDIF
+            {: RESULT = new IfNode(e, i, o, opleft, opright); :}
+        | OP_SWITCH:op expr:e DOS_PUNTS cas_opcions:c DEFAULT_SWITCH DOS_PUNTS instrs:i OP_ENDSWITCH
+            {: RESULT = new SwitchNode(e, c, i, opleft, opright); :}
+;
+
+optional_cond ::= OP_ELSE instrs:i
+            {: RESULT = i; :}
+        | /* buit */
+            {: RESULT = new ArrayList<InstrNode>(); :}
+;
+
+cas_opcions ::= cas_opcio:c cas_opcions:cs
+            {: RESULT = combinar(c, cs); :}
+        | cas_opcio:c
+            {: RESULT = crearLlista(c); :}
+;
+
+cas_opcio ::= terme:t DOS_PUNTS:d instrs:i
+            {: RESULT = new CaseNode(t, i, t.line, t.column); :}
+;
+
+loop ::= OP_WHILE:w OBR_PAR expr:e TANC_PAR OP_DO instrs:i OP_ENDWHILE
+            {: RESULT = new WhileNode(e, i, wleft, wright); :}
+        | OP_DO:d instrs:i OP_REP OBR_PAR expr:e TANC_PAR
+            {: RESULT = new DoWhileNode(i, e, dleft, dright); :}
+;
+
+entrada ::= INPUT:i OBR_PAR ref:r TANC_PAR
+            {: RESULT = new InputNode(r, ileft, iright); :}
+;
+
+sortida ::= OUTPUT:o OBR_PAR expr:e TANC_PAR
+            {: RESULT = new OutputNode(e, oleft, oright); :}
+;
+
+tipus ::= OP_TIPUS_ENTER:op
+            {: RESULT = new TypeNode(Kind.ENTER, opleft, opright); :}
+        | OP_TIPUS_CADENA:op
+            {: RESULT = new TypeNode(Kind.CADENA, opleft, opright); :}
+        | OP_TIPUS_CARACTER:op
+            {: RESULT = new TypeNode(Kind.CARACTER, opleft, opright); :}
+        | OP_TIPUS_LOGIC:op
+            {: RESULT = new TypeNode(Kind.LOGIC, opleft, opright); :}
+        | OP_TIPUS_TUPLA:op OBR_CLAU args:a TANC_CLAU
+            {: RESULT = new TypeNode(Kind.TUPLA, a, opleft, opright); :}
+        | ID:id
+            {: RESULT = new TypeNode(Kind.USER, id, idleft, idright); :}
+;
+
+args ::= arg:a COMA args:as
+            {: RESULT = combinar(a, as); :}
+        | arg: a
+            {: RESULT = crearLlista(a); :}
+        | /* buit */
+            {: RESULT = new ArrayList<ArgNode>(); :}
+;
+
+arg ::= ID:id DOS_PUNTS tipus:t
+            {: RESULT = new ArgNode(id, t); :}
+;
+
+assig ::= ASSIGNACIO expr:e
+            {: RESULT = e; :}
+        | /* buit */
+            {: RESULT = null; :}
+;
+
+expr ::= expr_logic:e
+            {: RESULT = e; :}
+;
+
+expr_logic ::= expr_logic:el op_log:op expr_rel:er
+            {: RESULT = new BinaryOpNode(el, op, er); :}
+        | expr_rel:er
+            {: RESULT = er; :}
+;
+
+expr_rel ::= expr_rel:er op_rel:op expr_arit:ea
+            {: RESULT = new BinaryOpNode(er, op, ea); :}
+        | expr_arit:ea
+            {: RESULT = ea; :}
+;
+
+expr_arit ::= expr_arit:ea op_arit:op terme:t
+            {: RESULT = new BinaryOpNode(ea, op, t); :}
+        | terme:t
+            {: RESULT = t; :}
+;
+
+terme ::= literal:l
+            {: RESULT = l; :}
+        | ref:r
+            {: RESULT = r; :}
+        | OBR_PAR expr:e TANC_PAR
+            {: RESULT = e; :}
+        | NOT:n expr:e
+            {: RESULT = new UnaryOpNode("NOT", e, nleft, nright); :}
+        | MENYS:g expr:e
+            {: RESULT = new UnaryOpNode("-", e, gleft, gright); :}
+;
+
+literal ::= VALOR_LOGIC:vl
+            {: RESULT = new LiteralNode(vl, vlleft, vlright); :}
+        | ENTER:e
+            {: RESULT = new LiteralNode(e, eleft, eright); :}
+        | CADENA:c
+            {: RESULT = new LiteralNode(c, cleft, cright); :}
+        | CARACTER:c
+            {: RESULT = new LiteralNode(c, cleft, cright); :}
+;
+
+ref ::= ID:id
+            {: RESULT = new RefNode(id, idleft, idright); :}
+        | ref:r PUNT ID:id
+            {: RESULT = new RefNode.CampAccessNode(r, id, r.line, r.column); :}
+        | call:c
+            {: RESULT = c; :}
+;
+
+call ::= ID:id OBR_PAR:op expr_list:e TANC_PAR
+            {: RESULT = new CallNode(id, e, idleft, idright); :}
+;
+
+expr_list ::= expr:e COMA expr_list:el
+            {: RESULT = combinar(e, el); :}
+            | expr:e
+                {: RESULT = crearLlista(e); :}
+            | /* buit */
+            {: RESULT = new ArrayList<ExprNode>(); :}
+;
+
+op_arit ::= PLUS
+            {: RESULT = "+"; :}
+        | MENYS
+            {: RESULT = "-"; :}
+        | TIMES
+            {: RESULT = "*"; :}
+        | DIVIDE
+            {: RESULT = "/"; :}
+;
+
+op_rel ::= EQ
+            {: RESULT = "=="; :}
+        | NE
+            {: RESULT = "!="; :}
+        | LT
+            {: RESULT = "<"; :}
+        | LE
+            {: RESULT = "<="; :}
+        | GT
+            {: RESULT = ">"; :}
+        | GE
+            {: RESULT = ">="; :}
+;
+
+op_log ::= AND
+            {: RESULT = "i"; :}
+        | OR
+            {: RESULT = "o"; :}
+;

@@ -1,6 +1,6 @@
 package codegen;
 
-import nodes.Kind;
+import ast.Kind;
 
 public class InstructionIO extends Instruction {
     public Kind tsbIO;

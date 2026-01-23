@@ -1,0 +1,15 @@
+principal err03:
+    enter x
+    enter y
+
+    inici
+        x := 1
+        y := 2
+
+        x := x @@ y
+
+        si () llavors
+
+        sortida("Fi de prova}
+    fi
+fprincipal

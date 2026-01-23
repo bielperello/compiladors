@@ -1,0 +1,32 @@
+principal prova03:
+    enter n
+    enter x
+    logic es_primer
+
+    inici
+        sortida("Introdueix un nombre enter major que 1:")
+        entrada(n)
+
+        es_primer := cert
+        x := 2
+
+        enter resultat
+
+        mentre (x <= n / 2 i es_primer) fer
+            resultat := (n / x) * x
+
+            si (resultat == n) llavors
+                es_primer := fals
+            sino
+                x := x + 1
+            fsi
+        fmentre
+
+
+        si (es_primer i n != 1) llavors
+            sortida("El nombre es primer")
+        sino
+            sortida("El nombre no es primer")
+        fsi
+    fi
+fprincipal
