@@ -1,0 +1,28 @@
+principal prova01:
+    enter edat
+    cadena nom
+    logic major
+
+    procediment mostra_majoria(esMajor: logic):
+        inici
+            si (esMajor) llavors
+                sortida("Ets major d'edat.")
+            sino
+                sortida("Ets menor d'edat.")
+            fsi
+        fi
+    fiprocediment
+
+    inici
+        sortida("Introdueix el teu nom:")
+        entrada(nom)
+
+        sortida("Introdueix la teva edat:")
+        entrada(edat)
+
+        major := (edat >= 18)
+
+        sortida("Nom: " + nom)
+        mostra_majoria(major)
+    fi
+fprincipal
