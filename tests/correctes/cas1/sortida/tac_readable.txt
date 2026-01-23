@@ -1,0 +1,36 @@
+goto BE_prova01
+mostra_majoria: skip
+pmb mostra_majoria
+BE_mostra_majoria: skip
+e4: skip
+t1 = LC_0
+wrt t1
+goto e6
+e5: skip
+t2 = LC_1
+wrt t2
+e6: skip
+rtn mostra_majoria
+BE_prova01: skip
+t1 = LC_2
+wrt t1
+read t2
+nom = t2
+t3 = LC_3
+wrt t3
+read t4
+edat = t4
+t5 = 18
+if edat >= t5 goto e7
+goto e8
+e7: skip
+major = -1
+goto e9
+e8: skip
+major = 0
+e9: skip
+t6 = LC_4
+t7 = t6 + nom
+wrt t7
+param_s major
+call mostra_majoria

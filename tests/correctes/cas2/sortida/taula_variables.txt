@@ -1,0 +1,7 @@
+--- Taula de Variables ---
+  1 | s                | ocup:16 | desp: -16 | tupla  | param:false | proc:1 | buf:-
+  2 | nivell_alerta    | ocup: 4 | desp: -20 | enter  | param:false | proc:1 | buf:-
+  3 | temp             | ocup: 4 | desp:  12 | enter  | param: true | proc:2 | buf:-
+  4 | actiu            | ocup: 4 | desp:  16 | logic  | param: true | proc:2 | buf:-
+  5 | codi             | ocup: 4 | desp:  -4 | enter  | param:false | proc:2 | buf:-
+  6 | nomS             | ocup: 4 | desp: -24 | cadena | param:false | proc:1 | buf:S_BUF_0

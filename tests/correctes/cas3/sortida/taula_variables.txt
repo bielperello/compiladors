@@ -1,0 +1,5 @@
+--- Taula de Variables ---
+  1 | n                | ocup: 4 | desp:  -4 | enter  | param:false | proc:1 | buf:-
+  2 | x                | ocup: 4 | desp:  -8 | enter  | param:false | proc:1 | buf:-
+  3 | es_primer        | ocup: 4 | desp: -12 | logic  | param:false | proc:1 | buf:-
+  4 | resultat         | ocup: 4 | desp: -16 | enter  | param:false | proc:1 | buf:-

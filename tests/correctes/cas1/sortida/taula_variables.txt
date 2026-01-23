@@ -1,0 +1,5 @@
+--- Taula de Variables ---
+  1 | edat       | ocup: 4 | desp:  -4 | enter  | param:false | proc:1 | buf:-
+  2 | nom        | ocup: 4 | desp:  -8 | cadena | param:false | proc:1 | buf:S_BUF_0
+  3 | major      | ocup: 4 | desp: -12 | logic  | param:false | proc:1 | buf:-
+  4 | esMajor    | ocup: 4 | desp:  12 | logic  | param: true | proc:2 | buf:-

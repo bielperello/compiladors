@@ -1,0 +1,51 @@
+goto BE_prova03
+BE_prova03: skip
+t1 = LC_0
+wrt t1
+read t2
+n = t2
+t3 = -1
+es_primer = t3
+t4 = 2
+x = t4
+e2: skip
+t5 = 2
+t6 = n / t5
+if x <= t6 goto e5
+goto e4
+e5: skip
+t7 = 0
+if es_primer != t7 goto e3
+goto e4
+e3: skip
+t8 = n / x
+t9 = t8 * x
+resultat = t9
+if resultat = n goto e6
+goto e7
+e6: skip
+t10 = 0
+es_primer = t10
+goto e8
+e7: skip
+t11 = 1
+t12 = x + t11
+x = t12
+e8: skip
+goto e2
+e4: skip
+t13 = 0
+if es_primer != t13 goto e9
+goto e11
+e9: skip
+t14 = 1
+if n != t14 goto e10
+goto e11
+e10: skip
+t15 = LC_1
+wrt t15
+goto e12
+e11: skip
+t16 = LC_2
+wrt t16
+e12: skip

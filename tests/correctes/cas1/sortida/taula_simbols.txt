@@ -1,0 +1,31 @@
+--- Taula de Símbols ---
+--- Taula de Símbols (scope:0, parent:-) ---
+   # | nom                | classe  | info
+ ----+--------------------+---------+-------------------------------
+   1 | cadena             | DTIPUS  | Tipus{nom=cadena, base=CADENA, ocupacio=4}
+   2 | caracter           | DTIPUS  | Tipus{nom=caracter, base=CARACTER, ocupacio=4}
+   3 | cert               | DCONST  | Constant{tipus=Tipus{nom=logic, base=LOGIC, ocupacio=4}, valor=-1}
+   4 | edat               | DVAR    | Variable{nv=1, tipus=enter, init=true, param=false}
+   5 | enter              | DTIPUS  | Tipus{nom=enter, base=ENTER, ocupacio=4, rang=[-2147483648, 2147483647]}
+   6 | fals               | DCONST  | Constant{tipus=Tipus{nom=logic, base=LOGIC, ocupacio=4}, valor=0}
+   7 | logic              | DTIPUS  | Tipus{nom=logic, base=LOGIC, ocupacio=4}
+   8 | major              | DVAR    | Variable{nv=3, tipus=logic, init=true, param=false}
+   9 | mostra_majoria     | DPROC   | Procediment{np=1, retorn=void, nArgs=1}
+  10 | nom                | DVAR    | Variable{nv=2, tipus=cadena, init=true, param=false}
+  11 | tupla              | DTIPUS  | Tipus{nom=tupla, base=TUPLA, ocupacio=0}
+  12 | unknown            | DTIPUS  | Tipus{nom=unknown, base=UNKNOWN, ocupacio=0}
+  13 | void               | DTIPUS  | Tipus{nom=void, base=VOID, ocupacio=0}
+
+--- Taula de Símbols (scope:1, parent:0) ---
+   # | nom                | classe  | info
+ ----+--------------------+---------+-------------------------------
+   1 | esMajor            | DVAR    | Argument{nom=esMajor, tipus=logic}
+
+--- Taula de Símbols (scope:2, parent:1) ---
+   # | nom                | classe  | info
+ ----+--------------------+---------+-------------------------------
+
+--- Taula de Símbols (scope:3, parent:1) ---
+   # | nom                | classe  | info
+ ----+--------------------+---------+-------------------------------
+

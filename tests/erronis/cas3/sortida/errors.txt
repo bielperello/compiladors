@@ -1,0 +1,11 @@
+TIPUS		LINIA	  COL	MISSATGE
+-----		-----	  ---	--------
+LEXIC    	    9	   16	Símbol desconegut: '@'
+LEXIC    	    9	   17	Símbol desconegut: '@'
+LEXIC    	   13	   17	Símbol desconegut: '"'
+SINTACTIC	    9	   14	Error sintàctic: instrucció ignorada.
+SINTACTIC	    9	   16	Error de sintaxi: token inesperat 'ERROR'
+SINTACTIC	   11	   12	Error sintàctic: instrucció ignorada.
+SINTACTIC	   11	   13	Error de sintaxi: token inesperat 'TANC_PAR'
+SINTACTIC	   13	   24	Error sintàctic: instrucció ignorada.
+SINTACTIC	   13	   29	Error de sintaxi: token inesperat 'TANC_CLAU'

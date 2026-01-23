@@ -1,0 +1,8 @@
+TIPUS		LINIA	  COL	MISSATGE
+-----		-----	  ---	--------
+SEMANTIC 	   17	   17	Tipus incompatible: s'intenta assignar una expressió de tipus CARACTER a 't' de tipus CADENA
+SEMANTIC 	   20	   16	Tipus de retorn incompatible: s'espera ENTER però s'ha trobat CADENA
+SEMANTIC 	   24	   16	Un procediment no pot aparèixer dins una expressió.
+SEMANTIC 	   26	    9	Tipus incompatible: s'intenta assignar una expressió de tipus ENTER a 'text' de tipus CADENA
+SEMANTIC 	   28	   16	Nombre d'arguments incorrecte a la crida de suma: s'esperaven 2, s'han passat 1
+SEMANTIC 	   30	   19	Tipus incorrecte a l’argument 1 de la crida a imprimeix: s'esperava CADENA i s'ha rebut ENTER

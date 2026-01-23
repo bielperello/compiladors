@@ -1,0 +1,7 @@
+TIPUS		LINIA	  COL	MISSATGE
+-----		-----	  ---	--------
+SEMANTIC 	    3	    5	La variable 'x' ja ha estat declarada.
+SEMANTIC 	    6	    9	Identificador no declarat: y
+SEMANTIC 	    8	    9	Tipus incompatible: s'intenta assignar una expressió de tipus CADENA a 'x' de tipus ENTER
+SEMANTIC 	   10	    9	La condició del 'if' ha de ser de tipus booleà.
+SEMANTIC 	   14	    9	Crida a subprograma no declarat: mostra_majoria

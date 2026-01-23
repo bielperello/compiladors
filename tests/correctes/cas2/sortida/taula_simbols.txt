@@ -1,0 +1,46 @@
+--- Taula de Símbols ---
+--- Taula de Símbols (scope:0, parent:-) ---
+   # | nom                | classe  | info
+ ----+--------------------+---------+-------------------------------
+   1 | Sensor             | DTIPUS  | Tipus{nom=Sensor, base=TUPLA, ocupacio=16, camps=4}
+   2 | cadena             | DTIPUS  | Tipus{nom=cadena, base=CADENA, ocupacio=4}
+   3 | calcula_alerta     | DPROC   | Funcio{np=1, retorn=enter, nArgs=2}
+   4 | caracter           | DTIPUS  | Tipus{nom=caracter, base=CARACTER, ocupacio=4}
+   5 | cert               | DCONST  | Constant{tipus=Tipus{nom=logic, base=LOGIC, ocupacio=4}, valor=-1}
+   6 | enter              | DTIPUS  | Tipus{nom=enter, base=ENTER, ocupacio=4, rang=[-2147483648, 2147483647]}
+   7 | fals               | DCONST  | Constant{tipus=Tipus{nom=logic, base=LOGIC, ocupacio=4}, valor=0}
+   8 | logic              | DTIPUS  | Tipus{nom=logic, base=LOGIC, ocupacio=4}
+   9 | nivell_alerta      | DVAR    | Variable{nv=2, tipus=enter, init=true, param=false}
+  10 | nomS               | DVAR    | Variable{nv=6, tipus=cadena, init=true, param=false}
+  11 | s                  | DVAR    | Variable{nv=1, tipus=Sensor, init=false, param=false}
+  12 | tupla              | DTIPUS  | Tipus{nom=tupla, base=TUPLA, ocupacio=0}
+  13 | unknown            | DTIPUS  | Tipus{nom=unknown, base=UNKNOWN, ocupacio=0}
+  14 | void               | DTIPUS  | Tipus{nom=void, base=VOID, ocupacio=0}
+
+--- Taula de Símbols (scope:1, parent:0) ---
+   # | nom                | classe  | info
+ ----+--------------------+---------+-------------------------------
+   1 | actiu              | DVAR    | Argument{nom=actiu, tipus=logic}
+   2 | codi               | DVAR    | Variable{nv=5, tipus=enter, init=true, param=false}
+   3 | temp               | DVAR    | Argument{nom=temp, tipus=enter}
+
+--- Taula de Símbols (scope:2, parent:1) ---
+   # | nom                | classe  | info
+ ----+--------------------+---------+-------------------------------
+
+--- Taula de Símbols (scope:3, parent:1) ---
+   # | nom                | classe  | info
+ ----+--------------------+---------+-------------------------------
+
+--- Taula de Símbols (scope:4, parent:0) ---
+   # | nom                | classe  | info
+ ----+--------------------+---------+-------------------------------
+
+--- Taula de Símbols (scope:5, parent:0) ---
+   # | nom                | classe  | info
+ ----+--------------------+---------+-------------------------------
+
+--- Taula de Símbols (scope:6, parent:0) ---
+   # | nom                | classe  | info
+ ----+--------------------+---------+-------------------------------
+

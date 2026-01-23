@@ -1,0 +1,60 @@
+goto BE_prova02
+calcula_alerta: skip
+pmb calcula_alerta
+BE_calcula_alerta: skip
+t1 = 70
+if temp > t1 goto e4
+goto e5
+e4: skip
+t2 = 0
+if actiu != t2 goto e6
+goto e5
+e5: skip
+t3 = 90
+if temp > t3 goto e6
+goto e7
+e6: skip
+t4 = 2
+codi = t4
+goto e8
+e7: skip
+t5 = 1
+codi = t5
+e8: skip
+rtn = codi
+rtn calcula_alerta
+BE_prova02: skip
+t1 = LC_0
+s[0] = t1
+t2 = 70
+s[4] = t2
+t3 = -1
+s[8] = t3
+t4 = S
+s[12] = t4
+t5 = s[8]
+param_s t5
+t6 = s[4]
+param_s t6
+call calcula_alerta
+t7 = rtn
+nivell_alerta = t7
+t8 = s[0]
+nomS = t8
+t9 = 1
+if nivell_alerta != t9 goto e10
+t10 = LC_1
+t11 = t10 + nomS
+wrt t11
+goto e9
+e10: skip
+t12 = 2
+if nivell_alerta != t12 goto e11
+t13 = LC_2
+t14 = t13 + nomS
+wrt t14
+goto e9
+e11: skip
+t15 = LC_3
+wrt t15
+e9: skip

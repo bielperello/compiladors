@@ -1,0 +1,77 @@
+--- Fitxer de Tòkens ---
+
+   # | token              | posició    | lexema       | valor
+ ----+--------------------+------------+--------------+-----------------
+   1 | PRINCIPAL          |   1:1      | principal    | -
+   2 | ID                 |   1:11     | prova01      | prova01
+   3 | DOS_PUNTS          |   1:18     | :            | -
+   4 | OP_TIPUS_ENTER     |   2:5      | enter        | -
+   5 | ID                 |   2:11     | edat         | edat
+   6 | OP_TIPUS_CADENA    |   3:5      | cadena       | -
+   7 | ID                 |   3:12     | nom          | nom
+   8 | OP_TIPUS_LOGIC     |   4:5      | logic        | -
+   9 | ID                 |   4:11     | major        | major
+  10 | PROCEDIMENT        |   6:5      | procediment  | -
+  11 | ID                 |   6:17     | mostra_majoria | mostra_majoria
+  12 | OBR_PAR            |   6:31     | (            | -
+  13 | ID                 |   6:32     | esMajor      | esMajor
+  14 | DOS_PUNTS          |   6:39     | :            | -
+  15 | OP_TIPUS_LOGIC     |   6:41     | logic        | -
+  16 | TANC_PAR           |   6:46     | )            | -
+  17 | DOS_PUNTS          |   6:47     | :            | -
+  18 | INICI              |   7:9      | inici        | -
+  19 | OP_IF              |   8:13     | si           | -
+  20 | OBR_PAR            |   8:16     | (            | -
+  21 | ID                 |   8:17     | esMajor      | esMajor
+  22 | TANC_PAR           |   8:24     | )            | -
+  23 | OP_THEN            |   8:26     | llavors      | -
+  24 | OUTPUT             |   9:17     | sortida      | -
+  25 | OBR_PAR            |   9:24     | (            | -
+  26 | CADENA             |   9:25     | "Ets major d'edat." | Ets major d'edat.
+  27 | TANC_PAR           |   9:44     | )            | -
+  28 | OP_ELSE            |  10:13     | sino         | -
+  29 | OUTPUT             |  11:17     | sortida      | -
+  30 | OBR_PAR            |  11:24     | (            | -
+  31 | CADENA             |  11:25     | "Ets menor d'edat." | Ets menor d'edat.
+  32 | TANC_PAR           |  11:44     | )            | -
+  33 | OP_ENDIF           |  12:13     | fsi          | -
+  34 | FI                 |  13:9      | fi           | -
+  35 | ENDPROCEDIMENT     |  14:5      | fiprocediment | -
+  36 | INICI              |  16:5      | inici        | -
+  37 | OUTPUT             |  17:9      | sortida      | -
+  38 | OBR_PAR            |  17:16     | (            | -
+  39 | CADENA             |  17:17     | "Introdueix el teu nom:" | Introdueix el teu nom:
+  40 | TANC_PAR           |  17:41     | )            | -
+  41 | INPUT              |  18:9      | entrada      | -
+  42 | OBR_PAR            |  18:16     | (            | -
+  43 | ID                 |  18:17     | nom          | nom
+  44 | TANC_PAR           |  18:20     | )            | -
+  45 | OUTPUT             |  20:9      | sortida      | -
+  46 | OBR_PAR            |  20:16     | (            | -
+  47 | CADENA             |  20:17     | "Introdueix la teva edat:" | Introdueix la teva edat:
+  48 | TANC_PAR           |  20:43     | )            | -
+  49 | INPUT              |  21:9      | entrada      | -
+  50 | OBR_PAR            |  21:16     | (            | -
+  51 | ID                 |  21:17     | edat         | edat
+  52 | TANC_PAR           |  21:21     | )            | -
+  53 | ID                 |  23:9      | major        | major
+  54 | ASSIGNACIO         |  23:15     | :=           | -
+  55 | OBR_PAR            |  23:18     | (            | -
+  56 | ID                 |  23:19     | edat         | edat
+  57 | GE                 |  23:24     | >=           | -
+  58 | ENTER              |  23:27     | 18           | 18.0
+  59 | TANC_PAR           |  23:29     | )            | -
+  60 | OUTPUT             |  25:9      | sortida      | -
+  61 | OBR_PAR            |  25:16     | (            | -
+  62 | CADENA             |  25:17     | "Nom: "      | Nom: 
+  63 | PLUS               |  25:25     | +            | -
+  64 | ID                 |  25:27     | nom          | nom
+  65 | TANC_PAR           |  25:30     | )            | -
+  66 | ID                 |  26:9      | mostra_majoria | mostra_majoria
+  67 | OBR_PAR            |  26:23     | (            | -
+  68 | ID                 |  26:24     | major        | major
+  69 | TANC_PAR           |  26:29     | )            | -
+  70 | FI                 |  27:5      | fi           | -
+  71 | ENDPRINCIPAL       |  28:1      | fprincipal   | -
+  72 | EOF                |  29:1      | -            | -
+  73 | EOF                |  29:1      | -            | -
