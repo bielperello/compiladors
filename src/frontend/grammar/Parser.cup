@@ -6,8 +6,8 @@
  *
  * Professor: Pere Palmer
  *
- * Generar:
- * java -jar java-cup-11b.jar -expect 36 -parser Parser -symbols ParserSym -destdir src/frontend/parser src/frontend/grammar/Parser.cup
+ * Compilar:
+ * java -jar java-cup-11b.jar -parser Parser -symbols ParserSym -destdir src/frontend/parser src/frontend/grammar/Parser.cup
  */
 package frontend.parser;
 
@@ -23,6 +23,10 @@ import java.util.*;
 class Parser;
 
 parser code {:
+    public frontend.lexer.AnaLex lexer() {
+        return (frontend.lexer.AnaLex) getScanner();
+    }
+
     public <T> List<T> combinar(T first, List<T> rest) {
         List<T> list = new ArrayList<>();
         list.add(first);
@@ -39,8 +43,8 @@ parser code {:
     @Override
     public void report_error(String message, Object info) {
         Symbol s = (Symbol) info;
-        int line = (s != null) ? (s.left + 1) : -1;
-        int column = (s != null) ? (s.right + 1) : -1;
+        int line = (s != null) ? s.left : -1;
+        int column = (s != null) ? s.right : -1;
         String text = (s != null && s.value != null) ? s.value.toString() : "";
         ErrorManager.add(new CompilerError(
             line, column, CompilerError.TYPE.SINTACTIC,
@@ -80,7 +84,7 @@ parser code {:
 terminal Symbol
             PRINCIPAL, ENDPRINCIPAL,
             OP_IF, OP_THEN, OP_ELSE, OP_ENDIF,
-            OP_SWITCH, DEFAULT_SWITCH, OP_ENDSWITCH,
+            OP_SWITCH, OP_CASE, DEFAULT_SWITCH, OP_ENDSWITCH,
             OP_WHILE, OP_DO, OP_ENDWHILE,
             OP_REP, PROCEDIMENT, ENDPROCEDIMENT,
             FUNCIO, ENDFUNCIO, TORNAR, CONST,
@@ -89,16 +93,16 @@ terminal Symbol
             PLUS, TIMES, DIVIDE, MENYS,
             EQ, NE, LT, LE, GT, GE, INPUT, OUTPUT,
             AND, OR, NOT, ASSIGNACIO, OBR_PAR,TANC_PAR,
-            OBR_CORX, TANC_CORX, OBR_CLAU, TANC_CLAU, DOS_PUNTS,
-            COMA, PUNT_COMA, PUNT, ERROR, INICI, FI;
+            OBR_CLAU, TANC_CLAU, DOS_PUNTS,
+            COMA, PUNT, INICI, FI;
 
-terminal String ID, CADENA;
+terminal String ID, TYPE_ID, CADENA;
 terminal Character CARACTER;
 terminal Double ENTER;
 terminal Boolean VALOR_LOGIC;
 
 non terminal ProgramNode program;
-non terminal List<DeclNode> decls, safe_decls;
+non terminal List<DeclNode> decls;
 non terminal List<InstrNode> instrs, bloc, optional_cond;
 non terminal DeclNode decl;
 non terminal InstrNode instr,  entrada, sortida;
@@ -132,26 +136,21 @@ precedence right NOT;          // negació (NOT) té associativitat a la dreta
 
 start with program;
 
-program ::= PRINCIPAL:p ID:id DOS_PUNTS safe_decls:d bloc:b ENDPRINCIPAL
+program ::= PRINCIPAL:p ID:id DOS_PUNTS decls:d bloc:b ENDPRINCIPAL
             {: RESULT = new ProgramNode(id, d, b, pleft, pright); :}
-;
-
-safe_decls ::= decls:d
-            {: RESULT = d; :}
-        | error:e decls:d
-            {:
-                ErrorManager.add(new CompilerError(
-                    eleft, eright, CompilerError.TYPE.SINTACTIC,
-                    "Error sintàctic: declaració ignorada."
-                ));
-                RESULT = d;
-            :}
 ;
 
 decls ::= decl:d decls:ds
             {: RESULT = combinar(d, ds); :}
         | method:m decls:ds
             {: RESULT = combinar(m, ds); :}
+        | error:e decls:ds
+            {: ErrorManager.add(new CompilerError(
+                   eleft, eright, CompilerError.TYPE.SINTACTIC,
+                   "Error sintàctic a la declaració."
+               ));
+               RESULT = ds;
+            :}
         | /* buit */
             {: RESULT = new ArrayList<DeclNode>(); :}
 ;
@@ -160,11 +159,15 @@ decl ::= tipus:t ID:id assig:a
             {: RESULT = new DeclNode(t, id, a, false, t.line, t.column); :}
         | CONST:c tipus:t ID:id ASSIGNACIO expr:e
             {: RESULT = new DeclNode(t, id, e, true, t.line, t.column); :}
+        | OP_TIPUS_TUPLA:op ID:id
+            {: lexer().addUserType(id); :}
+         OBR_CLAU args:a TANC_CLAU
+            {: RESULT = new DeclNode(new TypeNode(Kind.TUPLA, a, opleft, opright), id, null, false, opleft, opright); :}
 ;
 
-method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS safe_decls:d bloc:b return_func:r ENDFUNCIO
+method ::= FUNCIO:f tipus:t ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS decls:d bloc:b return_func:r ENDFUNCIO
             {: RESULT = new MethodNode(true, id, t, a, d, b, r, fleft, fright); :}
-        | PROCEDIMENT:p ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS safe_decls:d bloc:b ENDPROCEDIMENT
+        | PROCEDIMENT:p ID:id OBR_PAR args:a TANC_PAR DOS_PUNTS decls:d bloc:b ENDPROCEDIMENT
             {: RESULT = new MethodNode(false, id, new TypeNode(Kind.VOID, pleft, pright),
                                       a, d, b, null, pleft, pright); :}
 ;
@@ -193,8 +196,8 @@ instrs ::= instr:i instrs:is
             {: RESULT = new ArrayList<InstrNode>(); :}
 ;
 
-instr ::= ref:r
-            {: RESULT = new InstrNode.InstrRefNode(r); :}
+instr ::= call:c
+            {: RESULT = new InstrNode.InstrRefNode(c); :}
         | cond:c
             {: RESULT = c; :}
         | loop:l
@@ -231,8 +234,8 @@ cas_opcions ::= cas_opcio:c cas_opcions:cs
             {: RESULT = crearLlista(c); :}
 ;
 
-cas_opcio ::= terme:t DOS_PUNTS:d instrs:i
-            {: RESULT = new CaseNode(t, i, t.line, t.column); :}
+cas_opcio ::= OP_CASE:op terme:t DOS_PUNTS:d instrs:i
+            {: RESULT = new CaseNode(t, i, opleft, opright); :}
 ;
 
 loop ::= OP_WHILE:w OBR_PAR expr:e TANC_PAR OP_DO instrs:i OP_ENDWHILE
@@ -257,9 +260,7 @@ tipus ::= OP_TIPUS_ENTER:op
             {: RESULT = new TypeNode(Kind.CARACTER, opleft, opright); :}
         | OP_TIPUS_LOGIC:op
             {: RESULT = new TypeNode(Kind.LOGIC, opleft, opright); :}
-        | OP_TIPUS_TUPLA:op OBR_CLAU args:a TANC_CLAU
-            {: RESULT = new TypeNode(Kind.TUPLA, a, opleft, opright); :}
-        | ID:id
+        | TYPE_ID:id
             {: RESULT = new TypeNode(Kind.USER, id, idleft, idright); :}
 ;
 
@@ -307,6 +308,8 @@ terme ::= literal:l
             {: RESULT = l; :}
         | ref:r
             {: RESULT = r; :}
+        | call:c
+            {: RESULT = c; :}
         | OBR_PAR expr:e TANC_PAR
             {: RESULT = e; :}
         | NOT:n expr:e
@@ -329,8 +332,6 @@ ref ::= ID:id
             {: RESULT = new RefNode(id, idleft, idright); :}
         | ref:r PUNT ID:id
             {: RESULT = new RefNode.CampAccessNode(r, id, r.line, r.column); :}
-        | call:c
-            {: RESULT = c; :}
 ;
 
 call ::= ID:id OBR_PAR:op expr_list:e TANC_PAR

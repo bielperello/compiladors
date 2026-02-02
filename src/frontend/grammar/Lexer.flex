@@ -11,6 +11,7 @@ package frontend.lexer;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.*;
 
 import frontend.parser.ParserSym;
 
@@ -46,7 +47,19 @@ caracter        = \'([^\'\\]|\\.)\'
 comentari = ##.*
 
 %{
-    // ===== Dump de tokens =====
+  private final java.util.Set<String> userTypes = new java.util.HashSet<>();
+
+  public void addUserType(String name) {
+      userTypes.add(name);
+  }
+
+
+  private boolean isUserType(String name) {
+      return userTypes.contains(name);
+  }
+
+
+  // ===== Dump de tokens =====
     private final StringBuilder tokenDump = new StringBuilder();
     private boolean headerPrinted = false;
     private int tokenIndex = 0;
@@ -123,12 +136,9 @@ comentari = ##.*
 ":"                  { return symbol(ParserSym.DOS_PUNTS); }
 "("                  { return symbol(ParserSym.OBR_PAR); }
 ")"                  { return symbol(ParserSym.TANC_PAR); }
-"["                  { return symbol(ParserSym.OBR_CORX); }
-"]"                  { return symbol(ParserSym.TANC_CORX); }
 "{"                  { return symbol(ParserSym.OBR_CLAU); }
 "}"                  { return symbol(ParserSym.TANC_CLAU); }
 ","                  { return symbol(ParserSym.COMA);}
-";"                  { return symbol(ParserSym.PUNT_COMA); }
 "."                  { return symbol(ParserSym.PUNT); }
 "-"                  { return symbol(ParserSym.MENYS); }
 
@@ -170,6 +180,7 @@ comentari = ##.*
 "sino"               { return symbol(ParserSym.OP_ELSE); }
 "fsi"                { return symbol(ParserSym.OP_ENDIF); }
 "cas"                { return symbol(ParserSym.OP_SWITCH); }
+"quan"               { return symbol(ParserSym.OP_CASE); }
 "altre"              { return symbol(ParserSym.DEFAULT_SWITCH); }
 "fcas"               { return symbol(ParserSym.OP_ENDSWITCH); }
 "mentre"             { return symbol(ParserSym.OP_WHILE); }
@@ -225,7 +236,11 @@ comentari = ##.*
                         return symbol(ParserSym.CARACTER, car);
                      }
 {valor_logic}        { return symbol(ParserSym.VALOR_LOGIC, this.yytext().equals("cert"));}
-{id}                 { return symbol(ParserSym.ID, this.yytext()); }
+{id}                 {
+                        String lex = yytext();
+                        if (isUserType(lex)) return symbol(ParserSym.TYPE_ID, lex);
+                        return symbol(ParserSym.ID, lex);
+                     }
 {nombre}             { return symbol(ParserSym.ENTER, Double.parseDouble(this.yytext())); }
 
 // ERROR
@@ -236,5 +251,5 @@ comentari = ##.*
         "Símbol desconegut: '" + yytext() + "'"
     ));
 
-    return symbol(ParserSym.ERROR, yytext());
+    return next_token();
 }

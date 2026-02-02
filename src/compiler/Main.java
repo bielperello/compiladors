@@ -5,6 +5,8 @@ import java.io.FileReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import assembler.AssemblerGenerator;
@@ -19,6 +21,29 @@ import frontend.lexer.AnaLex;
 import frontend.parser.Parser;
 
 public class Main {
+
+    private static String baseName(String path) {
+        String name = Paths.get(path).getFileName().toString();
+        int dot = name.lastIndexOf('.');
+        return (dot >= 0) ? name.substring(0, dot) : name;
+    }
+
+    private static String safe(String s) {
+        // Evita caràcters problemàtics en noms de carpeta
+        return s.replaceAll("[^a-zA-Z0-9._-]", "_");
+    }
+
+    /**
+     * Crea un directori de sortida únic per execució dins de {@code baseOutDir}.
+     * Ex: out/20260202_153012_123_programa/
+     */
+    private static Path buildUniqueRunOutputDir(String baseOutDir, String inputPath) throws Exception {
+        String ts = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        String runId = ts + "_" + safe(baseName(inputPath));
+        Path runPath = Paths.get(baseOutDir).resolve(runId);
+        Files.createDirectories(runPath);
+        return runPath;
+    }
 
     public static void main(String[] args) {
         // 1) Entrada: fitxer passat per línia de comandes
@@ -41,20 +66,29 @@ public class Main {
                 System.err.println("     al directori arrel del projecte.");
                 return;
             }
-
-            // Cas 2: s'executa amb arguments
         } else {
             inputPath = args[0];
         }
 
-        // 2) (Opcional) carpeta de sortida
-        String outDir = (args.length >= 2) ? args[1] : "out";
-        Path outDirPath = Paths.get(outDir);
+        // 2) Directori de sortida:
+        //    - Si l'usuari el passa, es respecta exactament
+        //    - Si no, s'usa "out/<runId>/" per no sobreescriure execucions anteriors
+        Path outDirPath;
+        try {
+            if (args.length >= 2) {
+                outDirPath = Paths.get(args[1]);
+                Files.createDirectories(outDirPath);
+            } else {
+                outDirPath = buildUniqueRunOutputDir("out", inputPath);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return;
+        }
 
 
         try {
             ErrorManager.clear();
-            Files.createDirectories(outDirPath);
 
             // =========================
             // FRONT-END: lèxic + sintàctic
@@ -78,8 +112,8 @@ public class Main {
 
             if (ErrorManager.hasErrors()) {
                 System.out.println("S'han detectat errors (lèxics/sintàctics). S'atura la compilació.");
-
                 ErrorManager.writeToFile(outDirPath.resolve("errors.txt"));
+                System.out.println("S'han escrit els errors a: " + outDirPath.resolve("errors.txt").toAbsolutePath());
                 return;
             }
 
@@ -94,11 +128,12 @@ public class Main {
 
             if (ErrorManager.hasErrors()) {
                 System.out.println("S'han detectat errors semàntics. S'atura la compilació.");
-
                 ErrorManager.writeToFile(outDirPath.resolve("errors.txt"));
+                System.out.println("S'han escrit els errors a: " + outDirPath.resolve("errors.txt").toAbsolutePath());
                 return;
             }
 
+            // Dumps intermedis
             Files.writeString(outDirPath.resolve("tokens.txt"), lexer.getTokenDump());
             Files.writeString(outDirPath.resolve("taula_simbols.txt"), sem.getSymbolTableDump());
 
@@ -109,12 +144,14 @@ public class Main {
             ast.generateCode();
             CodeGenerator.actualitzarProcediments();
 
-            Files.writeString(outDirPath.resolve("taula_variables.txt"), CodeGenerator.getTaulaVariables().toFullString());
+            Files.writeString(outDirPath.resolve("taula_variables.txt"),
+                    CodeGenerator.getTaulaVariables().toFullString());
 
-            Files.writeString(outDirPath.resolve("taula_procediments.txt"), CodeGenerator.getTaulaProcediments().toFullString());
+            Files.writeString(outDirPath.resolve("taula_procediments.txt"),
+                    CodeGenerator.getTaulaProcediments().toFullString());
 
-            Files.writeString(outDirPath.resolve("tac_readable.txt"), CodeGenerator.readableCode());
-
+            Files.writeString(outDirPath.resolve("tac_readable.txt"),
+                    CodeGenerator.readableCode());
 
             // =========================
             // BACK-END: ASM sense optimitzar
@@ -135,11 +172,12 @@ public class Main {
             asmOpt.writeToFile(outDirPath.resolve("program_opt").toString());
 
             System.out.println("Compilació finalitzada correctament.");
-            System.out.println("Entrada: " + inputPath);
-            System.out.println("Sortida: " + outDirPath.toAbsolutePath());
+            System.out.println("Fitxer d'entrada: " + inputPath);
+            System.out.println("Directori de sortida: " + outDirPath.toAbsolutePath());
 
         } catch (Exception e) {
             e.printStackTrace();
+            System.out.println("S'ha produït una excepció. Sortida parcial (si n'hi ha) a: " + outDirPath.toAbsolutePath());
         }
     }
 }
